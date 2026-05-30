@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PETUGAS GERBANG '98: SHIFT MENCEKAM</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #050505; font-family: 'Courier New', Courier, monospace; user-select: none; }
+        #game-wrapper { position: relative; width: 100%; height: 100%; max-width: 1200px; margin: 0 auto; background-color: #111; overflow: hidden; box-shadow: 0 0 100px rgba(0,0,0,1); }
+        #game-wrapper::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.85) 100%); pointer-events: none; z-index: 99; }
+
+        /* --- BOOT LOADING SCREEN --- */
+        #loading-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: #22ff22; z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; box-sizing: border-box; text-shadow: 0 0 5px #22ff22; }
+        #loading-box { width: 450px; text-align: left; }
+        .progress-bar-container { width: 100%; height: 20px; border: 2px solid #22ff22; margin-top: 15px; position: relative; overflow: hidden; }
+        .progress-bar-fill { width: 0%; height: 100%; background: #22ff22; box-shadow: 0 0 10px #22ff22; transition: width 0.1s linear; }
+        #log-container { font-size: 11px; margin-top: 15px; height: 80px; overflow: hidden; color: #88ff88; line-height: 1.4; }
+
+        /* --- KACA JENDELA --- */
+        #window-frame { position: absolute; top: 0; left: 0; width: 100%; height: 55%; background: linear-gradient(to bottom, #4f555a, #8a939e, #a6b1bd); border: 25px solid #151c24; border-bottom: 8px solid #090d12; box-sizing: border-box; overflow: hidden; }
+        .smoke { position: absolute; background: rgba(20,20,20,0.5); border-radius: 50%; filter: blur(35px); animation: drift 20s infinite alternate ease-in-out; }
+        @keyframes drift { 0% { transform: translate(0, 0) scale(1); opacity: 0.3; } 100% { transform: translate(150px, -20px) scale(1.8); opacity: 0.8; } }
+        
+        .smoke-level2 { background: rgba(50,40,40,0.6) !important; filter: blur(30px) !important; animation: driftChaos 12s infinite alternate ease-in-out !important; }
+        .smoke-level3 { background: rgba(90,30,20,0.7) !important; filter: blur(25px) !important; animation: driftChaos 8s infinite alternate ease-in-out !important; }
+        .smoke-klender { background: rgba(35,35,35,0.85) !important; filter: blur(30px) !important; animation: driftKlender 5s infinite alternate ease-in-out !important; }
+        .smoke-chaos { background: rgba(80,15,15,0.75) !important; filter: blur(25px) !important; animation: driftChaos 4s infinite alternate ease-in-out !important; }
+        
+        @keyframes driftChaos { 0% { transform: translate(-30px, 10px) scale(1.2); opacity: 0.6; } 100% { transform: translate(180px, -40px) scale(2.2); opacity: 0.95; } }
+        @keyframes driftKlender { 0% { transform: translate(-10px, 20px) scale(1.1); opacity: 0.7; } 100% { transform: translate(210px, -30px) scale(2.0); opacity: 0.95; } }
+
+        #road { position: absolute; bottom: 0; width: 100%; height: 35%; background: linear-gradient(to bottom, #2c2c2c, #1a1a1a); border-top: 6px solid #bbb; box-shadow: inset 0 10px 20px rgba(0,0,0,0.5); }
+        .stripe { position: absolute; top: 50%; width: 100%; height: 8px; background: repeating-linear-gradient(90deg, transparent, transparent 70px, #e7daae 70px, #e7daae 140px); opacity: 0.6; }
+
+        #toll-gate { position: absolute; bottom: 35%; left: -10px; width: 65%; height: 22px; background: repeating-linear-gradient(45deg, #ba2c2c, #ba2c2c 30px, #f4f4f4 30px, #f4f4f4 60px); transform-origin: left center; transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 0 10px 10px 0; z-index: 20; border: 3px solid #111; box-shadow: 0 20px 20px rgba(0,0,0,0.8); }
+        .gate-open { transform: rotate(-88deg); }
+
+        /* --- KENDARAAN --- */
+        #vehicle-spawn { position: absolute; bottom: 8%; right: -650px; transition: right 1.8s cubic-bezier(0.16, 1, 0.3, 1); z-index: 10; filter: drop-shadow(-20px 30px 20px rgba(0,0,0,0.7)); }
+        .car-model { width: 380px; height: 150px; background: linear-gradient(to bottom, #244263, #132438); border-radius: 25px 90px 12px 12px; position: relative; border: 3px solid #050505; }
+        .car-model .window { position: absolute; top: 15px; left: 80px; width: 140px; height: 55px; background: #080808; border-radius: 12px 45px 0 0; border: 4px solid #1a1a1a; overflow: hidden; }
+        .bus-model { width: 530px; height: 230px; background: linear-gradient(to bottom, #962626, #591414); border-radius: 12px; position: relative; border: 4px solid #050505; }
+        .bus-model .windows { position: absolute; top: 25px; left: 12px; width: 500px; height: 65px; background: repeating-linear-gradient(90deg, #090909, #090909 75px, #1a1a1a 75px, #1a1a1a 85px); border: 4px solid #0f0f0f; }
+        .bus-model .banner { position: absolute; top: 100px; left: 50px; background: #fcfcfc; padding: 6px 35px; font-weight: bold; font-family: 'Impact', sans-serif; color: #b81414; font-size: 32px; transform: rotate(-2.5deg); box-shadow: 5px 5px 15px rgba(0,0,0,0.7); border: 2px solid #111; }
+        .wheel { position: absolute; bottom: -32px; width: 75px; height: 75px; background: radial-gradient(circle, #555 15%, #111 30%, #000 100%); border-radius: 50%; border: 4px solid #050505; }
+        .w-front { left: 60px; } .w-back { right: 60px; }
+
+        #police-spawn { position: absolute; bottom: 8%; left: -650px; transition: left 1.2s ease-out; z-index: 15; filter: drop-shadow(20px 30px 20px rgba(0,0,0,0.7)); display: none; }
+        .police-car { width: 380px; height: 150px; background: linear-gradient(to bottom, #e6ebf0, #95a5a6); border-radius: 90px 25px 12px 12px; position: relative; border: 3px solid #050505; display: flex; align-items: center; justify-content: center; }
+        .police-car img { width: 90px; height: 90px; position: absolute; top: 15px; left: 80px; object-fit: cover; border-radius: 50%; border: 2px solid #000; background: #ccc; }
+        .police-car::after { content: 'POLISI'; position: absolute; top: 65px; left: 185px; font-size: 26px; font-weight: bold; color: #1f4788; font-family: 'Arial Black'; text-shadow: 1px 1px 0 #fff; }
+        .police-car .siren { position: absolute; top: -18px; left: 160px; width: 50px; height: 18px; background: red; border-radius: 6px 6px 0 0; border: 2px solid #111; }
+
+        /* --- MEJA & DEKORASI --- */
+        #desk { position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to bottom, #3a3d45, #1c1d21); border-top: 18px solid #15161a; box-shadow: inset 0 40px 40px rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: flex-end; z-index: 30; }
+
+        /* KORAN DI MEJA */
+        #desk-newspaper { position: absolute; left: 260px; bottom: 15px; width: 95px; height: 55px; background: #dcd9cd; border: 2px solid #5c5950; transform: rotate(14deg) skewX(-10deg); box-shadow: 4px 6px 12px rgba(0,0,0,0.8); cursor: pointer; z-index: 35; transition: 0.2s; overflow: hidden; padding: 3px; }
+        #desk-newspaper:hover { transform: rotate(14deg) skewX(-10deg) translateY(-4px); filter: brightness(1.1); }
+        #desk-newspaper::before { content: 'HARIAN IBU KOTA'; font-size: 7px; font-weight: bold; color: #222; text-align: center; display: block; border-bottom: 1px solid #777; margin-bottom: 3px; }
+        #desk-newspaper::after { content: ''; display: block; width: 100%; height: 2px; background: #666; margin-bottom: 2px; box-shadow: 0 4px 0 #666, 0 8px 0 #666, 0 12px 0 #666; }
+
+        /* BROSUR TEMPAT LAYOUT MEJA */
+        .brochure-item { position: absolute; width: 60px; height: 85px; border: 1px solid #111; box-shadow: 3px 5px 10px rgba(0,0,0,0.7); cursor: pointer; z-index: 36; padding: 4px; box-sizing: border-box; overflow: hidden; font-weight: bold; font-size: 6px; text-align: center; }
+        #brochure-white { left: 275px; bottom: 75px; background: #ffffff; color: #333; border-color: #ccc; transform: rotate(-15deg); display: none; }
+        #brochure-white:hover { transform: rotate(-15deg) translateY(-4px); filter: brightness(1.05); }
+        #brochure-red { left: 340px; bottom: 82px; background: #c0392b; color: #fff; border-color: #5c1d1d; transform: rotate(10deg); display: none; }
+        #brochure-red:hover { transform: rotate(10deg) translateY(-4px); filter: brightness(1.1); }
+
+        /* RADIO TAPE KOMPONEN */
+        #desk-radio { position: absolute; left: 15px; bottom: 155px; width: 105px; height: 65px; background: linear-gradient(135deg, #444, #222); border: 3px solid #111; border-radius: 4px; box-shadow: 5px 5px 12px rgba(0,0,0,0.8); cursor: pointer; z-index: 35; padding: 5px; box-sizing: border-box; color: #aaa; font-family: Arial, sans-serif; }
+        #desk-radio:hover { filter: brightness(1.15); }
+        .radio-grill { width: 50px; height: 35px; background: repeating-linear-gradient(90deg, #111, #111 2px, #333 2px, #333 4px); border: 1px solid #000; float: left; margin-top: 10px; }
+        .radio-dial { width: 32px; height: 20px; background: #22ff22; border: 1px solid #111; float: right; font-size: 7px; color: #000; font-weight: bold; text-align: center; line-height: 20px; text-shadow: none; box-shadow: inset 0 0 4px #000; overflow: hidden; }
+        .radio-knob { width: 12px; height: 12px; background: #777; border-radius: 50%; border: 1px solid #000; float: right; margin-top: 8px; margin-right: 10px; }
+        .radio-status-text { font-size: 7px; font-weight: bold; position: absolute; bottom: 4px; right: 6px; color: #ff3333; }
+
+        /* --- AREA LAYOUT PETUGAS --- */
+        #officer-cards-zone { position: absolute; left: 15px; bottom: 10px; width: 235px; height: 230px; z-index: 34; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; gap: 10px; }
+        
+        /* ID CARD GANTUNGAN PETUGAS */
+        .id-card-style { width: 95px; height: 125px; background: #f2efe6; border-radius: 5px; box-shadow: 6px 6px 15px rgba(0,0,0,0.7); border: 2px solid #b5b2a9; padding: 6px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; position: relative; left: 5px; transform: rotate(-3deg); }
+        .id-card-style .clip { width: 28px; height: 9px; background: linear-gradient(to bottom, #999, #666); border-radius: 10px; position: absolute; top: -5px; border: 1px solid #333; }
+        .id-card-style img { width: 65px; height: 65px; object-fit: cover; border: 1.5px solid #111; margin-top: 10px; background-color: #ccc; }
+        .id-card-style .name { font-family: 'Arial', sans-serif; font-size: 9px; font-weight: bold; margin-top: 5px; color: #222; text-align: center; width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+        /* KTP BASE (JADUL 1998) */
+        .ktp-card-base { width: 225px; height: 145px; background: #ecd99f; border: 2px solid #7c6435; border-radius: 5px; box-shadow: 4px 8px 15px rgba(0,0,0,0.7); padding: 5px 7px; box-sizing: border-box; font-family: 'Arial', sans-serif; color: #111; display: flex; flex-direction: column; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2); }
+        .ktp-header { text-align: center; font-size: 7.5px; font-weight: bold; border-bottom: 2px double #222; padding-bottom: 1px; margin-bottom: 4px; line-height: 1.2; }
+        .ktp-body { display: flex; gap: 6px; flex: 1; min-height: 0; }
+        .ktp-foto-frame { width: 52px; height: 72px; background: #888; border: 1px solid #111; overflow: hidden; box-shadow: 1px 1px 3px rgba(0,0,0,0.4); flex-shrink: 0; }
+        .ktp-foto-frame img { width: 100%; height: 100%; object-fit: cover; }
+        .ktp-data { font-size: 7.5px; line-height: 1.25; font-weight: bold; flex: 1; overflow: hidden; text-transform: uppercase; }
+        .ktp-data span { font-weight: normal; font-family: 'Courier New', monospace; font-size: 8px; color: #000; }
+        .ktp-expired { color: #b91c1c !important; font-weight: bold !important; border: 1px solid #b91c1c; padding: 0 1px; display: inline-block; background: rgba(185,28,28,0.1); }
+
+        /* ZOOM CARD MEJA */
+        #player-ktp-card { transform: rotate(1deg); cursor: pointer; }
+        #player-ktp-card:hover:not(.ktp-zoom) { transform: rotate(1deg) translateY(-5px); filter: brightness(1.05); }
+        #npc-ktp { position: absolute; left: 370px; bottom: -200px; transform: rotate(-4deg); z-index: 36; cursor: pointer; }
+        #npc-ktp:hover:not(.ktp-zoom) { transform: rotate(-4deg) translateY(-8px); filter: brightness(1.05); }
+        .ktp-zoom { position: fixed !important; left: 50% !important; bottom: 42% !important; transform: translate(-50%, 50%) scale(2.4) rotate(0deg) !important; z-index: 200 !important; box-shadow: 0 0 60px rgba(0,0,0,0.95) !important; }
+
+        /* --- STRUK TARIF TOL --- */
+        #receipt-slot { position: absolute; right: 220px; bottom: 255px; width: 90px; height: 10px; background: #333; border: 2px solid #555; z-index: 35; }
+        #toll-receipt { position: absolute; right: 222px; bottom: 257px; width: 86px; height: 0px; background: #fff; border: 1px solid #ccc; border-bottom: 3px dashed #111; box-shadow: 2px -5px 10px rgba(0,0,0,0.3); z-index: 34; transition: height 1.2s cubic-bezier(0.1, 0.8, 0.3, 1); overflow: hidden; font-family: 'Courier New', monospace; color: #111; font-size: 6px; font-weight: bold; padding: 0 4px; box-sizing: border-box; text-align: center; cursor: pointer; line-height: 1.2;}
+        #toll-receipt.printed:hover { filter: brightness(0.9) translateY(-3px); }
+
+        /* --- MESIN KASIR --- */
+        #ncr-machine { width: 620px; height: 98%; background: linear-gradient(135deg, #ccc7ba, #99958a); border-radius: 15px 15px 0 0; border: 5px solid #827e74; box-shadow: 0 -20px 40px rgba(0,0,0,0.9), inset 3px 3px 6px #fff; padding: 22px; box-sizing: border-box; display: flex; flex-direction: column; margin-left: -50px; }
+        #ncr-header { text-align: center; color: #4f4c43; font-weight: bold; font-size: 15px; letter-spacing: 3px; margin-bottom: 15px; text-shadow: 1px 1px 0px rgba(255,255,255,0.5); }
+        #ncr-top-panel { background-color: #aba698; border-radius: 6px; padding: 14px; display: flex; gap: 15px; margin-bottom: 22px; box-shadow: inset 3px 3px 6px rgba(0,0,0,0.4); border: 1px solid #8c887c; }
+        #ncr-screen { flex: 1; background-color: #050d05; border: 7px solid #1a1a1a; border-radius: 6px; padding: 15px; color: #22ff22; font-size: 16px; font-weight: bold; box-shadow: inset 0 0 25px #000; display: flex; flex-direction: column; justify-content: space-between; text-shadow: 0 0 5px #22ff22; position: relative; overflow: hidden; }
+        #ncr-screen::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.2), rgba(0,0,0,0.2) 2px, transparent 2px, transparent 4px); pointer-events: none; }
+        .screen-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+
+        #ncr-keyboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 10px; }
+        .ncr-btn { font-family: 'Courier New', monospace; font-size: 15px; font-weight: bold; text-align: center; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 4px; box-shadow: 3px 6px 0px rgba(0,0,0,0.5); border: 2px solid; text-transform: uppercase;}
+        .ncr-btn:active:not(.disabled) { transform: translate(3px, 6px); box-shadow: 0px 0px 0px rgba(0,0,0,0); }
+        .span-2 { grid-column: span 2; }
+        .btn-blue { background: linear-gradient(to bottom, #6384a3, #415d78); color: #fff; border-color: #24384a; border-top-color: #8bb2d9; border-left-color: #8bb2d9; }
+        .btn-gray { background: linear-gradient(to bottom, #ebdcc5, #cfae8a); color: #222; border-color: #8f7454; border-top-color: #fff; border-left-color: #fff; }
+        .btn-green { background: linear-gradient(to bottom, #599462, #34613b); color: #fff; border-color: #1b3820; border-top-color: #82c78d; border-left-color: #82c78d; }
+        .input-display { background-color: #736f64; color: #fff; border: 3px solid #4f4c43; font-size: 15px; display: flex; align-items: center; justify-content: center; box-shadow: inset 3px 3px 10px rgba(0,0,0,0.5); font-weight: bold; }
+
+        #walkie-talkie { position: absolute; right: 90px; bottom: 30px; width: 110px; height: 240px; cursor: pointer; z-index: 40; filter: drop-shadow(15px 20px 20px rgba(0,0,0,0.9)); transition: transform 0.1s; }
+        #walkie-talkie:active { transform: translateY(6px); filter: drop-shadow(5px 5px 10px rgba(0,0,0,0.9)); }
+        .wt-body { position: absolute; bottom: 0; width: 100%; height: 180px; background: linear-gradient(to right, #2b2b2b, #151515, #1f1f1f); border-radius: 12px; border: 3px solid #000; }
+        .wt-antenna { position: absolute; top: -50px; right: 20px; width: 14px; height: 75px; background: linear-gradient(to right, #1f1f1f, #0a0a0a); border-radius: 6px 6px 0 0; border: 2px solid #000; }
+        .wt-speaker { position: absolute; top: 25px; left: 20px; width: 70px; height: 70px; background: radial-gradient(circle, #111 25%, transparent 25%), radial-gradient(circle, transparent 25%, #050505 25%); background-size: 8px 8px; border-radius: 50%; border: 3px solid #000; }
+        .wt-btn-red { position: absolute; top: 105px; left: 35px; width: 40px; height: 40px; background: radial-gradient(circle, #e74c3c, #c0392b); border-radius: 50%; border: 3px solid #000; box-shadow: 0 4px 0 #5c1d1d; }
+        .wt-label { position: absolute; bottom: 12px; width: 100%; text-align: center; color: #888; font-size: 11px; font-family: 'Arial'; font-weight: bold; }
+
+        /* --- UI DIALOG --- */
+        #dialog-box { position: absolute; top: 180px; left: 50%; transform: translateX(-50%); width: 60%; background: rgba(0,0,0,0.9); border: 4px solid #fff; border-radius: 10px; padding: 20px; color: #fff; font-family: 'Arial', sans-serif; font-size: 20px; font-weight: bold; z-index: 80; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.8); line-height: 1.5; }
+        .dialog-name { color: #f1c40f; font-size: 18px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #555; padding-bottom: 5px; }
+        
+        #player-choices { margin-top: 15px; display: none; flex-direction: column; gap: 10px; }
+        .choice-btn { background: #34495e; color: #fff; border: 2px solid #fff; padding: 10px 15px; font-size: 18px; text-align: left; cursor: pointer; font-family: 'Arial', sans-serif; transition: 0.1s; }
+        .choice-btn:hover { background: #f1c40f; color: #000; }
+
+        /* --- OVERLAYS --- */
+        .screen-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 100; color: #fff; text-align: center; box-sizing: border-box; }
+        .menu-container { display: flex; gap: 40px; align-items: center; }
+        .setup-box { background: #1a1a1a; border: 3px solid #555; padding: 25px; border-radius: 10px; width: 380px; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .setup-box label { font-family: 'Arial', sans-serif; font-size: 13px; font-weight: bold; display: block; margin-bottom: 5px; color: #ccc; }
+        .setup-box input, .setup-box select { width: 100%; padding: 8px; font-size: 15px; font-family: 'Courier New', monospace; border: 2px solid #777; background: #000; color: #0f0; margin-bottom: 12px; box-sizing: border-box; }
+        
+        .level-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 15px; }
+        .lvl-btn { padding: 10px; background: #222; border: 2px solid #555; color: #fff; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.1s; text-align: center;}
+        .lvl-btn.selected { background: #f1c40f; color: #000; border-color: #fff; box-shadow: 0 0 10px #f1c40f; }
+        .lvl-btn:hover:not(.selected) { background: #444; }
+
+        .btn-menu { font-size: 16px; padding: 12px 24px; background: #fff; color: #000; cursor: pointer; font-weight: bold; border: 4px solid #999; text-transform: uppercase; margin-top: 5px; transition: 0.1s;}
+        .btn-menu:active { background: #ccc; transform: translateY(3px); }
+
+        #lobby-info-pane { width: 850px; background: #161a1d; border: 2px solid #343a40; border-radius: 8px; padding: 12px; margin-top: 15px; font-family: 'Arial', sans-serif; text-align: left; box-shadow: 0 5px 15px rgba(0,0,0,0.5); font-size: 11px; line-height: 1.4;}
+        .info-section { margin-bottom: 6px; border-bottom: 1px dashed #495057; padding-bottom: 6px; }
+        .info-section:last-child { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
+        .info-title { font-weight: bold; color: #f1c40f; text-transform: uppercase; font-size: 12px; margin-bottom: 3px; display: flex; align-items: center; gap: 5px; }
+
+        /* --- COMPONENT PROPAGANDA POPUP VIEW --- */
+        #propaganda-overlay { background: rgba(0,0,0,0.9); }
+        .propaganda-box { background: #ebdcb9; color: #111; font-family: 'Impact', 'Arial Black', sans-serif; width: 460px; padding: 35px; border: 8px double #b91c1c; box-shadow: 0 0 50px rgba(185,28,28,0.5); text-align: center; border-radius: 4px; }
+
+        /* --- KORAN UI --- */
+        .newspaper-container { background: #e2dfd3; color: #111; font-family: 'Times New Roman', Times, serif; padding: 35px; width: 920px; height: 600px; box-shadow: inset 0 0 50px rgba(0,0,0,0.5), 0 0 30px rgba(0,0,0,0.8); position: relative; border: 10px solid double #111; overflow: hidden; display: flex; flex-direction: column; }
+        .newspaper-container::before { content: ''; position: absolute; top:0; left:0; width:100%; height:100%; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px); pointer-events: none; z-index: 5; }
+        
+        .news-header { border-bottom: 5px solid #111; padding-bottom: 10px; margin-bottom: 15px; text-align: center; }
+        .news-header h1 { font-family: 'Georgia', serif; font-size: 46px; margin: 0; letter-spacing: -1px; line-height: 1; text-transform: uppercase; }
+        .news-header .news-date { font-family: 'Courier New', monospace; font-size: 13px; font-weight: bold; margin-top: 5px; border-top: 1px solid #111; border-bottom: 1px solid #111; padding: 3px 0; }
+        
+        .news-page { display: none; flex-direction: column; flex: 1; }
+        .news-page.active { display: flex; }
+        
+        .news-content { column-count: 2; column-gap: 35px; text-align: justify; font-size: 13px; line-height: 1.5; flex: 1; overflow-y: auto; padding-right: 10px; }
+        .news-content h2 { font-size: 20px; margin-top: 0; margin-bottom: 10px; line-height: 1.2; text-align: left; font-family: 'Georgia', serif; font-weight: bold; color: #000; }
+        .news-content p { margin-top: 0; margin-bottom: 12px; text-indent: 20px; }
+        
+        .news-image-frame { width: 100%; height: 145px; background: #444; border: 2px solid #111; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+        .news-image-frame img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.4); }
+        
+        .news-nav { position: absolute; bottom: 15px; left: 0; width: 100%; display: flex; justify-content: center; box-sizing: border-box; z-index: 10; }
+        .news-nav button { background: #111; color: #fff; border: 2px solid #fff; padding: 10px 20px; cursor: pointer; font-weight: bold; font-family: 'Courier New'; font-size: 15px; }
+
+        #score-board { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.85); color: #fff; padding: 15px; font-size: 18px; border: 3px solid #fff; z-index: 50; box-shadow: 5px 5px 15px rgba(0,0,0,0.5); font-weight: bold; display: flex; flex-direction: column; gap: 5px; }
+        .money-text { color: #2ecc71; }
+        .level-text { color: #f1c40f; }
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+
+    <!-- OVERLAY LOADING BOOT RETRO SCREEN -->
+    <div id="loading-screen">
+        <div id="loading-box">
+            <h2 style="margin: 0; font-size: 20px;">INITIALIZING NCR SYSTEM 1998...</h2>
+            <div class="progress-bar-container">
+                <div id="progress-fill" class="progress-bar-fill"></div>
+            </div>
+            <div style="text-align: right; margin-top: 5px; font-weight: bold;" id="progress-percent">0%</div>
+            <div id="log-container"></div>
+        </div>
+    </div>
+
+    <!-- MAIN MENU WITH STAGE SELECT -->
+    <div id="main-menu" class="screen-overlay" style="display: none;">
+        <h1 style="color: #f1c40f; font-size: 38px; margin-bottom: 5px; letter-spacing: 1px;">PETUGAS GERBANG '98: SHIFT MENCEKAM</h1>
+        <p style="font-size: 14px; color: #ccc; margin-bottom: 15px;">Daftarkan berkas tugas gerbang Anda untuk mencetak ID Card & KTP.</p>
+        
+        <div class="menu-container">
+            <div class="setup-box">
+                <label>NAMA PETUGAS:</label>
+                <input type="text" id="input-nama" value="" placeholder="Ketik namamu..." autocomplete="off" oninput="updateIDPreview()">
+                
+                <label>GENDER KARAKTER:</label>
+                <select id="input-gender" onchange="updateIDPreview()">
+                    <option value="male">Laki-Laki</option>
+                    <option value="female">Perempuan</option>
+                </select>
+
+                <label>UMUR PETUGAS (TAHUN):</label>
+                <select id="input-umur" onchange="updateIDPreview()">
+                    <option value="30">30</option><option value="29">29</option><option value="28">28</option>
+                    <option value="27">27</option><option value="26">26</option><option value="25" selected>25</option>
+                    <option value="24">24</option><option value="23">23</option><option value="22">22</option>
+                    <option value="21">21</option><option value="20">20</option>
+                </select>
+
+                <label style="color: #f1c40f;">PILIH LEVEL JAGA (BEBAS):</label>
+                <div class="level-grid">
+                    <button class="lvl-btn selected" id="lvl-1" onclick="selectLevel(1)">L1</button>
+                    <button class="lvl-btn" id="lvl-2" onclick="selectLevel(2)">L2</button>
+                    <button class="lvl-btn" id="lvl-3" onclick="selectLevel(3)">L3</button>
+                    <button class="lvl-btn" id="lvl-4" onclick="selectLevel(4)">L4</button>
+                    <button class="lvl-btn" id="lvl-5" onclick="selectLevel(5)">L5</button>
+                </div>
+
+                <button class="btn-menu" style="width: 100%; background: #f1c40f;" onclick="goToRules()">LANJUT KE CARA MAIN</button>
+            </div>
+
+            <!-- PREVIEW KARTU DI MENU UTAMA -->
+            <div style="display: flex; flex-direction: column; gap: 15px; align-items: center;">
+                <div class="id-card-style" style="position: static; transform: scale(1.05) rotate(-2deg);">
+                    <div class="clip"></div>
+                    <img id="preview-foto-id" src="assets/karakter/karakter_cowok.png">
+                    <div class="name" id="preview-nama-id">KASIR</div>
+                </div>
+
+                <div class="ktp-card-base" style="transform: scale(1.05) rotate(1deg);">
+                    <div class="ktp-header">PROVINSI DKI JAKARTA<br>KARTU TANDA PENDUDUK PETUGAS</div>
+                    <div class="ktp-body">
+                        <div class="ktp-foto-frame"><img id="preview-foto-ktp" src="assets/karakter/karakter_cowok.png"></div>
+                        <div class="ktp-data">
+                            <div>NIK: <span>317400001998001</span></div>
+                            <div>Nama: <span id="preview-id-nama">KASIR</span></div>
+                            <div>Gender: <span id="preview-id-gender">LAKI-LAKI</span></div>
+                            <div>Tgl Lahir: <span id="preview-id-tgl">29-01-1973</span></div>
+                            <div>Alamat: <span>JL. RAYA PONDOK GEDE NO. 12</span></div>
+                            <div>Fisik: <span id="preview-id-phys">LAKI-LAKI MUDA</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL INFO DISCLAIMER & KREDIT GAME -->
+        <div id="lobby-info-pane">
+            <div class="info-section">
+                <div class="info-title">⚠️ Disclaimer Keamanan & Kebijakan Umum</div>
+                <div style="color: #adb5bd;">Permainan ini dibuat murni untuk tujuan hiburan, simulasi manajemen taktis, dan edukasi elemen fiksi interaktif. Seluruh nama tokoh, data identitas, lokasi fiksi, narasi, dan peristiwa fiksi 1998 di dalam game ini dikembangkan tanpa ada unsur untuk menyinggung suku, ras, agama, golongan, maupun individu/organisasi nyata tertentu di dunia nyata.</div>
+            </div>
+            <div class="info-section">
+                <div class="info-title">🎬 Kredit Pengembang & Inspirasi Karya</div>
+                <div style="color: #adb5bd;">Dikembangkan secara independen oleh <b>Rafa Mandala Putra Mioktobi</b>. Proyek simulasi interaktif ini terintegrasi dan didasarkan pada konsep mekanik atmosferis game retro indie <b>"1998: The Toll Keeper Story"</b>. Segala aset re-mapping folder karakter disesuaikan untuk visualisasi imersif player.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCREEN ATURAN / CARA MAIN -->
+    <div id="rules-screen" class="screen-overlay">
+        <div class="rules-content" style="background: #111; border: 3px solid #f1c40f; padding: 25px; max-width: 800px; text-align: left; font-family: 'Arial'; line-height: 1.5;">
+            <h2 style="color: #f1c40f; text-align: center; margin-top: 0; border-bottom: 2px dashed #f1c40f; padding-bottom: 10px; text-transform: uppercase;">PANDUAN OPERASIONAL CARA BERMAIN</h2>
+            
+            <div style="margin-bottom: 15px; background: #1a1a1a; padding: 12px; border-left: 5px solid #3498db; font-size: 14px; color: #ddd;">
+                <b>ALUR UTAMA INTERAKSI BARU:</b><br>
+                1. Tunggu mobil datang. Klik Opsi Pilihan Jawaban Pertama untuk **BERBICARA DULU** ke supir.<br>
+                2. Setelah supir membalas omongan lu, **BARU PILIHAN BROSUR ATAU PROSES STRUK KELUAR** di bawah teks dialog.<br>
+                3. Bandingkan kolom <b>"Fisik"</b> dengan <b>Tahun Kelahiran</b> pada berkas KTP NPC (Klik KTP di meja untuk perbesar).<br>
+                4. Perhatikan target uang per level! Level 1: 10k, Level 2: 20k, Level 3: 50k, Level 4: 80k, Level 5: 100k.
+            </div>
+
+            <ul style="font-size: 14px; color: #fff; padding-left: 20px;">
+                <li style="margin-bottom:8px;">🚗 <b>MEMPROSES MOBIL SIPIL:</b> Jika data KTP valid, tekan tombol keyboard mesin kasir digital <b>[GOL I]</b> lalu klik tombol hijau <b>[TOTAL/ENTER]</b>.</li>
+                <li style="margin-bottom:8px;">🖨️ <b>MEKANIK PRINTER STRUK:</b> Klik kertas putih struk yang keluar dari bawah meja untuk merobek dan melepaskan mobil lintasan.</li>
+                <li style="margin-bottom:8px;">🚨 <b>BUS REFORMASI / PENYELUNDUP:</b> Langsung klik <b>WALKIE-TALKIE CH-POLRI</b> di kanan meja untuk memanggil bantuan barikade, jangan beri mereka jalan.</li>
+            </ul>
+            <div style="text-align: center; margin-top: 15px;"><button class="btn-menu" style="background: #3498db; color: #fff;" onclick="goToPreGameNewspaper()">BACA HEADLINE SEKARANG</button></div>
+        </div>
+    </div>
+
+    <!-- SCREEN KORAN POPUP -->
+    <div id="newspaper-screen" class="screen-overlay">
+        <div class="newspaper-container">
+            <div class="news-header">
+                <h1 id="news-paper-title">HARIAN IBU KOTA</h1>
+                <div class="news-date" id="news-paper-date">EDISI KHUSUS | 1998 | JAKARTA, INDONESIA</div>
+            </div>
+            
+            <div class="news-page active" id="page-1">
+                <div class="news-content">
+                    <div class="news-image-frame">
+                        <img id="news-img-asset" src="assets/koran/lv1.png" alt="ILUSTRASI BERITA">
+                    </div>
+                    <h2 id="news-headline-text">JUDUL UTAMA BERITA</h2>
+                    <div id="news-full-body"></div>
+                </div>
+            </div>
+
+            <div class="news-nav">
+                <button id="btn-close-news" onclick="handleNewspaperClose()" style="background: #27ae60;">MULAI SHIFT &#10004;</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP BROSUR PROPAGANDA VIEW FULL -->
+    <div id="propaganda-overlay" class="screen-overlay" onclick="closeBrochureView()">
+        <div class="propaganda-box" id="propaganda-box-bg" onclick="event.stopPropagation()">
+            <h1 id="prop-view-title" style="font-size: 24px; margin: 0 0 10px 0; letter-spacing: 2px;">⚠️ BROSUR ⚠️</h1>
+            <p id="prop-view-body" style="font-family: 'Times New Roman', serif; font-size: 15px; text-align: justify; font-weight: normal; line-height: 1.5; color: #111; background: #fff; padding: 15px; border: 2px solid #111;">
+                ISI TEKS BROSUR
+            </p>
+            <button class="btn-menu" style="background: #333; color:#fff;" onclick="closeBrochureView()">TUTUP BROSUR</button>
+        </div>
+    </div>
+
+    <!-- SCREEN GAME OVER / WIN -->
+    <div id="game-over" class="screen-overlay">
+        <h1 id="go-title" style="color: #e74c3c;">DI-PHK / DITANGKAP</h1>
+        <p id="go-reason" style="font-size: 20px; color: #eee; max-width: 700px; line-height: 1.5;">Alasan.</p>
+        <p style="font-size: 18px; color: #ccc;">Skor Akhir: <span id="final-score">0</span></p>
+        <p style="font-size: 22px; color: #2ecc71; font-weight: bold;">Total Pendapatan: Rp <span id="final-money">0</span></p>
+        <button class="btn-menu" onclick="location.reload()">KEMBALI KE MENU</button>
+    </div>
+
+    <!-- HUD DASHBOARD -->
+    <div id="score-board">
+        <div class="level-text">LEVEL TUGAS: <span id="level-val">1</span></div>
+        <div>SKOR: <span id="score-val">0</span></div>
+        <div class="money-text">PENDAPATAN: Rp <span id="money-val">0</span></div>
+        <div style="font-size: 11px; color: #f1c40f; margin-top:2px;">TARGET LEVEL: Rp <span id="target-val">0</span></div>
+    </div>
+    
+    <!-- UI DIALOG -->
+    <div id="dialog-box">
+        <div class="dialog-name" id="dialog-name">NPC</div>
+        <div id="dialog-text">...</div>
+        <div id="player-choices"></div>
+    </div>
+
+    <!-- JENDELA GERBANG -->
+    <div id="window-frame">
+        <div class="smoke" id="smoke-left" style="top: 10%; left: 5%; width: 300px; height: 180px;"></div>
+        <div class="smoke" id="smoke-right" style="top: 5%; right: 15%; width: 400px; height: 200px; background: rgba(40,25,25,0.6);"></div>
+        <div id="road">
+            <div class="stripe"></div>
+            <div id="toll-gate"></div>
+            <div id="vehicle-spawn"></div>
+            <div id="police-spawn">
+                <div class="police-car">
+                    <div class="siren"></div>
+                    <img src="assets/karakter/polisi.png" alt="POLISI">
+                    <div class="wheel w-front"></div>
+                    <div class="wheel w-back"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AREA DI ATAS MEJA -->
+    <div id="desk">
+        <div id="desk-newspaper" onclick="openNewspaperInGame()" title="Klik untuk Baca Koran Harian"></div>
+        
+        <!-- COMPONENT RADIO TAPE -->
+        <div id="desk-radio" onclick="toggleRadio()" title="Klik untuk menyalakan/mematikan Radio Loket">
+            <div style="font-size:7px; font-weight:bold; margin-bottom:2px;">TDK TAPE RECORDER</div>
+            <div class="radio-grill"></div>
+            <div class="radio-dial" id="radio-display">OFF</div>
+            <div class="radio-knob"></div>
+            <div class="radio-status-text" id="radio-status">🔴 MATI</div>
+        </div>
+
+        <!-- BROSUR PUTIH -->
+        <div id="brochure-white" class="brochure-item" onclick="viewBrochureContent('white')" title="Klik untuk baca isi selebaran putih">
+            <div style="font-size:7px; font-weight:bold; color:#2c3e50; border-bottom:1px solid #777; margin-bottom:2px;">INFO KRISIS</div>
+            <p style="margin:0; font-size:5px; font-weight:normal; text-align:left;">Informasi komoditas pangan pokok...</p>
+        </div>
+
+        <!-- BROSUR MERAH -->
+        <div id="brochure-red" class="brochure-item" onclick="viewBrochureContent('red')" title="Klik untuk baca isi selebaran merah">
+            <div style="font-size:7px; font-weight:bold; color:#fff; border-bottom:1px solid #fff; margin-bottom:2px;">REFORMASI!</div>
+            <p style="margin:0; font-size:5px; font-weight:normal; text-align:left; color:#dfdfdf;">Seruan Aliansi Mahasiswa Bergerak...</p>
+        </div>
+
+        <!-- LAYOUT KARTU PETUGAS -->
+        <div id="officer-cards-zone">
+            <!-- ID CARD GANTUNGAN -->
+            <div id="id-card-game" class="id-card-style">
+                <div class="clip"></div>
+                <img id="foto-id" src="assets/karakter/karakter_cowok.png" alt="FOTO">
+                <div class="name" id="nama-id">KASIR</div>
+            </div>
+
+            <!-- KTP PETUGAS -->
+            <div id="player-ktp-card" class="ktp-card-base" onclick="toggleZoomPlayerKTP()" title="Klik untuk Perbesar KTP Petugas">
+                <div class="ktp-header">PROVINSI DKI JAKARTA<br>KARTU TANDA PENDUDUK PETUGAS</div>
+                <div class="ktp-body">
+                    <div class="ktp-foto-frame"><img id="foto-ktp-id" src="assets/karakter/karakter_cowok.png"></div>
+                    <div class="ktp-data">
+                        <div>NIK: <span>317400001998001</span></div>
+                        <div>Nama: <span id="nama-ktp-id">KASIR</span></div>
+                        <div>Gender: <span id="gender-ktp-id">LAKI-LAKI</span></div>
+                        <div>Tgl Lahir: <span id="tgl-ktp-id">29-01-1973</span></div>
+                        <div>Alamat: <span>JL. RAYA PONDOK GEDE NO. 12</span></div>
+                        <div>Fisik: <span id="fisik-ktp-id">LAKI-LAKI MUDA</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KTP NPC INTERAKTIF -->
+        <div id="npc-ktp" class="ktp-card-base" onclick="toggleZoomKTP()" title="Klik untuk Perbesar KTP NPC">
+            <div class="ktp-header">PROVINSI DKI JAKARTA<br>KARTU TANDA PENDUDUK (1998)</div>
+            <div class="ktp-body">
+                <div class="ktp-foto-frame"><img id="ktp-foto-img" src="assets/karakter/wargapria1.png"></div>
+                <div class="ktp-data">
+                    <div>NIK: <span id="ktp-nik">1234567890</span></div>
+                    <div>Nama: <span id="ktp-nama">BUDI SANTOSO</span></div>
+                    <div>Gender: <span id="ktp-gender">LAKI-LAKI</span></div>
+                    <div>Tgl Lahir: <span id="ktp-tgl">14-08-1965</span></div>
+                    <div>Alamat: <span id="ktp-alamat">JL. KRAMAT RAYA NO. 45</span></div>
+                    <div>Fisik: <span id="ktp-phys">LAKI-LAKI MUDA</span></div>
+                    <div>Pekerjaan: <span id="ktp-kerja">WIRASWASTA</span></div>
+                    <div style="margin-top:2px;">Berlaku: <span id="ktp-berlaku">14-08-2001</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLOT PRINTER RETRO & KERTAS STRUK TARIF -->
+        <div id="receipt-slot"></div>
+        <div id="toll-receipt" onclick="tearAndGiveReceipt()" title="Klik untuk sobek & berikan struk ke pengemudi">
+            <div style="border-bottom: 1px dashed #222; margin-bottom: 2px; padding-top: 2px;">JASA MARGA '98</div>
+            <div id="rec-date">13/05/1998</div>
+            <div id="rec-plat">PLAT: -</div>
+            <div>GOLONGAN: GOL I</div>
+            <div style="border-top: 1px dashed #222; margin-top: 2px; font-size: 7px; color:#000;">TARIF: 1.500</div>
+        </div>
+
+        <!-- TERMINAL NCR -->
+        <div id="ncr-machine">
+            <div id="ncr-header">★ NCR DATA TERMINAL 1998 ★</div>
+            <div id="ncr-top-panel">
+                <div id="ncr-screen">
+                    <div>
+                        <div class="screen-row"><span>POS UTAMA</span><span id="time-display">14:02</span></div>
+                        <div class="screen-row"><span id="scr-plat">PLAT: -</span></div>
+                        <div class="screen-row"><span id="scr-asal" style="color: #fff;">STATUS: BOOTING...</span></div>
+                    </div>
+                    <div><div class="screen-row"><span>TARIF:</span><span id="scr-tarif">Rp 0</span></div></div>
+                </div>
+            </div>
+            <div id="ncr-keyboard">
+                <div class="ncr-btn span-2 btn-blue" style="height: 48px;" onclick="pressF1()">[F1] DIAG DETEKSI</div>
+                <div class="ncr-btn btn-gray" onclick="pressGol1()">GOL I</div>
+                <div class="ncr-btn btn-gray" onclick="badBeep()">GOL II</div>
+                <div class="ncr-btn btn-gray" style="height: 48px;" onclick="badBeep()">GOL III</div>
+                <div class="ncr-btn btn-gray" onclick="badBeep()">GOL IV</div>
+                <div class="ncr-btn span-2 btn-blue" onclick="badBeep()">FUNGSI LAIN</div>
+                <div class="input-display span-2" style="height: 52px;" id="input-box">INPUT: Rp 0</div>
+                <div class="ncr-btn span-2 btn-green" onclick="pressEnter()">[TOTAL/ENTER]</div>
+            </div>
+        </div>
+
+        <!-- WALKIE TALKIE CH POLRI -->
+        <div id="walkie-talkie" onclick="useWalkieTalkie()">
+            <div class="wt-antenna"></div>
+            <div class="wt-body">
+                <div class="wt-speaker"></div>
+                <div class="wt-btn-red"></div>
+                <div class="wt-label">CH-POLRI</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* --- TARGET PENDAPATAN DINAMIS PER LEVEL --- */
+    const targetUangPerLevel = {
+        1: 10000,
+        2: 20000,
+        3: 50000,
+        4: 80000,
+        5: 100000
+    };
+
+    /* --- DATA UTAMA KORAN (MENGGUNAKAN PATH SESUAI STRUKTUR VOLDER) --- */
+    const poolKoranPerLevel = {
+        1: {
+            title: "HARIAN IBU KOTA - EDISI LEVEL 1",
+            date: "SHIFT PAGI | SELASA, 12 MEI 1998",
+            image: "assets/koran/lv1.png",
+            headline: "BADAI KRISIS MONETER ASIA: ANTRIAN SEMBAKO MENGULAR & TOKO MULAI TUTUP",
+            body: `<p>JAKARTA - Dampak hantaman krisis ekonomi finansial di kawasan Asia kian melumpuhkan daya beli masyarakat luas di dalam negeri sejak pagi ini. Nilai tukar rupiah dilaporkan kian melorot tak terkendali terhadap dolar AS, menyentuh level psikologis baru yang memicu inflasi masif pada sektor komoditas harian.</p>
+                   <p>Kondisi pasar modal yang lesu berimbas langsung pada lonjakan harga bahan pokok secara liar. Pantauan wartawan di lapangan menunjukkan antrean panjang warga, didominasi oleh ibu rumah tangga, mengular hingga ratusan meter di luar pagar pasar induk demi mendapatkan jatah beras dan minyak goreng murah.</p>
+                   <p>"Kami bingung, uang belanja kemarin sudah tidak ada nilainya hari ini," ungkap salah satu warga di lokasi. Sementara itu, sebagian pengusaha pertokoan retail di pusat grosir Jakarta dikabarkan mulai memasang barikade pertahanan kayu pelindung darurat dan memilih menghentikan aktivitas dagang mereka untuk sementara waktu guna menghindari risiko keamanan yang tidak diinginkan.</p>`
+        },
+        2: {
+            title: "HARIAN IBU KOTA - EDISI LEVEL 2",
+            date: "SHIFT SIANG | RABU, 13 MEI 1998",
+            image: "assets/koran/lv2.png",
+            headline: "GERAKAN MAHASISWA MELUAS: KORBAN JIWA GUGUR DI DEPAN KAMPUS BERSANDAR",
+            body: `<p>JAKARTA - Ketegangan memuncak secara drastis di berbagai titik strategis ibu kota setelah laporan medis resmi mengonfirmasi adanya korban jiwa dari kalangan mahasiswa. Korban dilaporkan gugur akibat luka tembak dari peluru tajam di tengah pelaksanaan demonstrasi damai di area koridor kampus kemarin sore.</p>
+                   <p>Isak tangis and duka mendalam dari pihak keluarga serta kerabat korban seketika berubah menjadi gelombang solidaritas nasional yang tak terbendung. Pagi ini, ribuan mahasiswa dari gabungan berbagai universitas negeri maupun swasta tumpah ruah ke jalanan, mengenakan jaket almamater masing-masing.</p>
+                   <p>Aksi unjuk rasa yang semula terfokus di dalam halaman dalam lembaga pendidikan kini mulai meluas ke jalan-jalan arteri protokol utama. Mereka menuntut pembentukan tim investigasi independen untuk mengusut tuntas pelaku penembakan serta menyuarakan reformasi struktural menyeluruh atas kebijakan ekonomi dan birokrasi pemerintahan.</p>`
+        },
+        3: {
+            title: "HARIAN IBU KOTA - EDISI LEVEL 3",
+            date: "SHIFT SORE | KAMIS, 14 MEI 1998",
+            image: "assets/koran/lv3.png",
+            headline: "JAKARTA MEMBARA: MAHASISWA KUASAI JALANAN, KORBAN JIWA MENINGKAT TAJAM",
+            body: `<p>JAKARTA - Kerusuhan masif berskala besar dilaporkan telah melumpuhkan total urat nadi perekonomian ibu kota sejak siang hari ini. Kelompok massa tak dikenal bersama barisan demonstran dilaporkan menguasai berbagai persimpangan jalan tol dan arteri vital, menyebabkan kemacetan total berjam-jam.</p>
+                   <p>Kepulan asap hitam pekat membubung tinggi dari ban-ban bekas yang dibakar di tengah jalan serta ruko-ruko yang menjadi sasaran perusakan. Penjarahan logistik di pusat-pusat perbelanjaan dilaporkan pecah di beberapa wilayah sektor barat dan pusat kota tanpa mampu dicegah secara instan oleh aparat penegak hukum.</p>
+                   <p>Laporan berkala dari posko medis darurat dan rumah sakit lapangan menunjukkan angka korban luka dan korban jiwa sipil terus meningkat tajam akibat terjebak di dalam bangunan yang terbakar atau akibat friksi fisik di jalanan. Pihak otoritas menghimbau seluruh elemen penyeberang jalan untuk menjauhi kawasan rawan kerusuhan.</p>`
+        },
+        4: {
+            title: "HARIAN IBU KOTA - EDISI KELAM L4",
+            date: "SHIFT MALAM | JUMAT, 15 MEI 1998",
+            image: "assets/koran/lv4.png",
+            headline: "TRAGEDI PILU KOTA: MAL KLENDER TERBAKAR HEBAT DI TENGAH AMUK MASSA",
+            body: `<p>JAKARTA TIMUR - Kompleks pusat perbelanjaan Mal Klender (Yogya Plaza) dilaporkan hangus terbakar hebat setelah menjadi korban sasaran amuk massa tak dikenal sejak sore kemarin hingga malam ini. Kobaran api yang sangat besar melahap seluruh struktur lantai gedung pertokoan dengan cepat sebelum unit pemadam kebakaran berhasil menembus barikade massa di luar.</p>
+                   <p>Tragedi kemanusiaan ini memicu kepanikan luar biasa karena ratusan warga sipil dikabarkan terjebak di dalam koridor pertokoan saat api mulai membesar dari arah lantai dasar. Suara teriakan histeris terdengar dari jendela gedung yang terselimuti asap tebal beracun.</p>
+                   <p>Imbas dari tragedi kelam ini, arus psikologi masyarakat sipil berada di titik terendah. Suasana mencekam membuat ribuan keluarga memutuskan melakukan eksodus darurat massal keluar dari batas wilayah Jakarta melalui jalur tol darat. Pihak otoritas bandara internasional juga mencatat lonjakan dramatis antrean tiket penerbangan sipil ke luar negeri lantaran warga menganggap negara sudah tidak lagi aman.</p>`
+        },
+        5: {
+            title: "HARIAN IBU KOTA - EDISI SEJARAH L5",
+            date: "EDISI KHUSUS | KAMIS, 21 MEI 1998",
+            image: "assets/koran/lv5.png",
+            headline: "PRESIDEN SOEHARTO RESMI MENGUNDURKAN DIRI DARI JABATAN!",
+            body: `<p>ISTANA MERDEKA - Pagi ini tepat pada pukul 09.00 WIB, Presiden Soeharto secara resmi membacakan pernyataan berhenti dari jabatannya sebagai Presiden Republik Indonesia. Keputusan bersejarah ini diambil setelah beliau memimpin tampuk kekuasaan negara selama 32 tahun berturut-turut.</p>
+                   <p>Langkah pengunduran diri ini dilakukan menyusul tekanan politik yang luar biasa masif serta gelombang aksi pendudukan gedung parlemen oleh puluhan ribu mahasiswa dan berbagai tokoh elemen reformasi sipil nasional selama satu pekan terakhir.</p>
+                   <p>Sesuai dengan ketentuan konstitusi UUD 1945, posisi kepala negara kini secara resmi digantikan oleh Wakil Presiden B.J. Habibie yang langsung mengucapkan sumpah jabatan di depan Mahkamah Agung di Istana Merdeka. Suasana haru, sorak sorai, sekaligus ketegangan transisi mewarnai setiap sudut jalanan ibu kota hari ini.</p>`
+        }
+    };
+
+    /* --- DATA SIARAN RADIO PER LEVEL --- */
+    const poolRadioPerLevel = {
+        1: [
+            "📻 RADIO JASA: Dilaporkan antrean sembako warga mengular panjang di daerah Kramat pagi ini.",
+            "📻 INFO MONETER: Kurs rupiah terhadap dolar merosot ke tingkat terendah baru, memicu kepanikan dagang.",
+            "📻 HIK-FM: Toko-toko di kawasan Glodok dilaporkan mulai memasang barikade kayu pelindung darurat."
+        ],
+        2: [
+            "📻 KANORADIO: Berita duka cita mendalam, empat mahasiswa dilaporkan gugur akibat luka tembak di dada.",
+            "📻 POLDA METRO: Gelombang demonstrasi ribuan mahasiswa mulai bergerak memadati area jalan lingkar luar.",
+            "📻 LINTAS BERITA: Warga sipil kibarkan bendera setengah tiang sebagai bentuk penghormatan korban kampus."
+        ],
+        3: [
+            "📻 RADIO REFORMASI: Kepulan asap tebal akibat pembakaran ban dan toko mulai menutup pandangan udara kota.",
+            "📻 INFO TOL: Blokade massa membuat ruas jalan tol lingkar dalam mengalami kelumpuhan total, hati-hati.",
+            "📻 BERITA KILAT: Jumlah korban luka akibat bentrokan di kawasan perempatan Salemba kian bertambah malam ini."
+        ],
+        4: [
+            "📻 BREAKING NEWS: Asap hitam pekat kebakaran Mal Klender membubung tinggi ke arah langit sektor timur.",
+            "📻 LAPORAN SITUASI: Gelombang pengungsi memadati gerbang loket, warga panik melarikan diri ke luar kota.",
+            "📻 INFO BANDARA: Arus eksodus warga sipil via bandara Soekarno-Hatta dilaporkan melonjak drastis malam ini."
+        ],
+        5: [
+            "📻 RADIO REPUBLIK: Breaking News! Presiden Soeharto secara resmi menyatakan berhenti dari jabatan kepresidenan!",
+            "📻 ISTANA LOKAL: Pengambilan sumpah jabatan B.J. Habibie selesai digelar, transisi reformasi dimulai.",
+            "📻 SIAGA TOTAL: Mahasiswa di dalam gedung DPR/MPR bersorak haru menyambut keputusan bersejarah pagi ini."
+        ]
+    };
+
+    /* --- DATA BROSUR PER LEVEL --- */
+    const poolBrosurPerLevel = {
+        1: {
+            whiteTitle: "📄 MAKLUMAT BAHAN PANGAN (PUTIH LV1)",
+            whiteBody: "INFORMASI LOKAL: Stok beras, minyak goreng, dan komoditas terigu di pasar grosir induk dilaporkan aman untuk 3 hari ke depan. Warga dihimbau tidak panik buying.",
+            redTitle: "⚠️ PAMFLET AKSI REFORMASI (MERAH LV1)",
+            redBody: "SERUAN MAHASISWA: Rapatkan barisan gerakan moral melawan ketidakadilan harga ekonomi! Tolak kenaikan tarif komoditas dasar nasional segera!"
+        },
+        2: {
+            whiteTitle: "📄 NOTA DUKA CITA KAMPUS (PUTIH LV2)",
+            whiteBody: "PENGUMUMAN SEKTOR: Pernyataan resmi bela sungkawa atas tewasnya rekan mahasiswa dalam perjuangan damai. Mari jaga situasi tetap kondusif tanpa friksi fisik.",
+            redTitle: "⚠️ SELEBARAN GERAKAN REFORMASI (MERAH LV2)",
+            redBody: "LAWAN KEKERASAN: Usut tuntas pelaku penembakan peluru tajam kepada rekan sipil kami! Gelombang aksi damai serentak nasional tidak akan surut!"
+        },
+        3: {
+            whiteTitle: "📄 MAKLUMAT KEAMANAN POS (PUTIH LV3)",
+            whiteBody: "PERINTAH SHIFT: Seluruh loket tol diminta bersiap menutup gerbang jika eskalasi pembakaran properti kota mendekati koridor jalan bebas hambatan.",
+            redTitle: "⚠️ PAMFLET REVOLUSI JALANAN (MERAH LV3)",
+            redBody: "REFORMASI TOTAL: Turunkan rezim penindas hak rakyat sipil sekarang juga! Jakarta membara adalah simbol amarah dari perut yang lapar akibat inflasi keuangan!"
+        },
+        4: {
+            whiteTitle: "📄 MAKLUMAT JAM MALAM KOTA (PUTIH LV4)",
+            whiteBody: "PENGUMUMAN RESMI: Diberitahukan kepada seluruh pengguna jalan raya, jam malam operasional darurat diberlakukan mulai pukul 22.00 WIB demi menjaga keamanan objek vital kota.",
+            redTitle: "⚠️ PAMFLET GELAP ALIANSI BURUH (MERAH LV4)",
+            redBody: "KAMPANYE PERLAWANAN: Boikot seluruh struktur penarikan fasilitas birokrasi kroni moneter! Bersatu mogok kerja nasional demi menuntut hak upah buruh sipil yang terpuruk!"
+        },
+        5: {
+            whiteTitle: "📄 NOTULEN REFORMASI ISTANA (PUTIH LV5)",
+            whiteBody: "SIARAN PRESS: Salinan resmi pidato pernyataan berhenti Presiden Soeharto tanggal 21 Mei 1998 di Istana Merdeka. Keadaan dikendalikan kabinet darurat.",
+            redTitle: "⚠️ MAKMA REVOLUSI SIPIL TOTAL (MERAH LV5)",
+            redBody: "KEMENANGAN RAKYAT: Rezim 32 tahun runtuh! Kawal terus transisi demokrasi Indonesia di setiap titik penjagaan keamanan jalan agar tidak ditunggangi oknum!"
+        }
+    };
+
+    /* --- DATA DIALOG DAN SKENARIO JALUR WAKTU PER LEVEL --- */
+    const poolDialogPerLevel = {
+        1: [
+            {
+                npc: "Selamat pagi mas petugas loket, jalan tol ke arah Pasar Induk Kramat aman kan? Toko kelontong langganan saya pada nutup pintu pagi ini.",
+                pChoice: "Selamat pagi. Jalur tol sejauh ini masih kondusif dibuka, Pak. Ada keperluan logistik darurat?",
+                reply: "Iya nih mas, saya mau beli pasokan beras mumpung harganya belum dinaikkan lagi sama agen grosir.",
+                whiteReaction: `"Aduh, berita pasokan krisis ya? Makasih infonya mas petugas, saya mau langsung buru-buru pulang kabarin orang rumah."`,
+                redReaction: `*Mengepalkan tangan* "Hidup reformasi! Ternyata petugas loket juga sejalan sama gerakan. Terimakasih brosurnya mas, saya sebarin!"`
+            },
+            {
+                npc: "Aduh mas, rupiah lemes banget hari ini. Harga sembako di pasar swalayan melonjak tiga kali lipat dalam semalam, pusing saya!",
+                pChoice: "Krisis moneter memang memukul semua sektor ekonomi, Bu. Mohon tetap tenang di perjalanan.",
+                reply: "Gimana bisa tenang mas, uang tabungan gaji suami saya sebulan sekarang cuma cukup buat beli makan seminggu.",
+                whiteReaction: `"Alhamdulillah ada lembar panduan harga pangan murah ini. Sangat membantu di kondisi serba susah begini, mas."`,
+                redReaction: `"Aksi protes mahasiswa ya? Benar mas, kalau harga barang tidak diturunkan, kita semua bisa kelaparan."`
+            },
+            {
+                npc: "Mas kasir, tolong diproses cepat ya. Di jalan arteri di bawah jembatan tadi sekelompok massa sudah mulai kumpul bawa spanduk protes.",
+                pChoice: "Terima kasih infonya, Pak. Saya sarankan Anda langsung masuk jalur tol lingkar dalam agar terhindar dari hambatan.",
+                reply: "Iya mas, makanya ini saya buru-buru. Kuatir massanya makin bertambah banyak dan memblokir jalan.",
+                whiteReaction: `"Catatan rute logistik aman? Bagus mas, jadi saya tahu wilayah mana saja yang harus dihindari malam nanti."`,
+                redReaction: `"Wah pamflet pergerakan! Hidup mahasiswa, semoga suara rakyat kecil didengar di atas sana!"`
+            },
+            {
+                npc: "Permisi mas petugas, pom bensin di depan antreannya panjang banget sampai ke jalan. Pada takut BBM bakal langka ya?",
+                pChoice: "Ada isu pembatasan pasokan minyak, Bu. Sebaiknya isi penuh kendaraan Anda selagi pos pengisian masih buka.",
+                reply: "Benar dugaan saya, pantas saja tadi antrean truk logistik sampai bikin macet pintu keluar tol sebelah.",
+                whiteReaction: `"Terima kasih brosur infonya mas, saya akan bagikan ke tetangga kompleks perumahan biar tidak panik."`,
+                redReaction: `"Pamflet tuntutan ekonomi ya? Saya dukung mas, bensin naik bikin semua harga makanan ikut mencekik."`
+            },
+            {
+                npc: "Buka gerbangnya cepat mas, saya buru-buru disuruh anter pasokan bantuan sembako ini sebelum akses jalan utama ditutup warga sipil!",
+                pChoice: "Mohon tunggu sebentar, pemeriksaan berkas identitas supir angkutan barang wajib divalidasi.",
+                reply: "Lama banget aturan shift lu! Kota lagi tegang begini masih sempat-sempatnya birokrasi palang NCR diperlama!",
+                whiteReaction: `*Melirik sinis* "Gak butuh gua ginian! Buruan buka palang gerbangnya jangan banyak polah lu!"`,
+                redReaction: `*Melirik sinis* "Gak butuh gua ginian! Buruan buka palang gerbangnya jangan banyak polah lu!"`
+            }
+        ],
+        2: [
+            {
+                npc: "Mas... sedih sekali saya mendengar berita radio tape tadi. Ada empat mahasiswa yang gugur tertembak peluru tajam di depan kampus.",
+                pChoice: "Kami sekeluarga ikut berduka, Pak. Gelombang solidaritas dari kampus-kampus dikabarkan mulai bergerak siang ini.",
+                reply: "Iya mas, rasanya dada saya sesak. Mereka anak-anak muda yang memperjuangkan nasib kita, kenapa harus ditembak?",
+                whiteReaction: `"Terima kasih nota dukanya mas, gerakan damai ini harus didukung agar tidak ada lagi korban jiwa sia-sia."`,
+                redReaction: `*Mengepalkan tangan* "Usut tuntas pelaku penembakan! Selebaran ini akan saya tempel di kaca mobil saya mas!"`
+            },
+            {
+                npc: "Saya merinding sepanjang jalan tol mas. Anak perempuan saya juga kuliah di Jakarta Barat, cemas sekali saya takut dia kenapa-kenapa.",
+                pChoice: "Sebaiknya hubungi anak Anda untuk tetap berada di dalam lingkungan area universitas demi keamanan visual.",
+                reply: "Tadi telepon rumah tidak tersambung mas, jaringannya sibuk terus. Ini saya mau coba jemput langsung ke kosannya.",
+                whiteReaction: `"Lembar pengumuman situasi aman kampus? Syukur deh, berkas ini membuat hati saya sedikit lebih tenang mas."`,
+                redReaction: `"Selebaran reformasi? Benar mas, anak saya juga ikut turun ke jalan demi menuntut keadilan korban yang gugur."`
+            },
+            {
+                npc: "Tolong mas tol buruan diproses, rombongan konvoi mobil jenazah bendera kuning tanda duka rekan mahasiswa mau masuk jalur.",
+                pChoice: "Akses prioritas lajur kanan akan saya siapkan untuk rombongan pengiring. Mohon siapkan uang tarif pas.",
+                reply: "Terima kasih mas loket atas pengertiannya, kami mau mengantar jenazah kawan kami ke tempat peristirahatan terakhir.",
+                whiteReaction: `"Informasi posko medis darurat ya? Berkas ini sangat berguna buat kawan-kawan relawan di ambulance belakang."`,
+                redReaction: `*Mengepalkan tangan* "Daripada brosur, mari kita suarakan reformasi! Perjuangan kawan kami yang gugur tidak boleh sia-sia!"`
+            },
+            {
+                npc: "Permisi mas kasir, tol arah Semanggi diblokade tentara ya? Tadi saya lihat barikade kawat berduri mulai digelar di pinggir jalan.",
+                pChoice: "Pengamanan wilayah objek vital diperketat, Bu. Pastikan dokumen KTP Anda ditaruh di loket untuk validasi fisik.",
+                reply: "Ini KTP saya mas. Suasana kota berasa horor sekali, banyak aparat bersenjata lengkap jaga di jembatan penyeberangan.",
+                whiteReaction: `"Brosur imbauan kondusif? Baik mas petugas, kita ikuti instruksi biar tidak terjebak friksi militer."`,
+                redReaction: `"Tuntutan adili pelaku penembakan ya? Ibu setuju mas, anak-anak mahasiswa itu tidak bersenjata!"`
+            },
+            {
+                npc: "Nih buruan ambil duit tarifnya mas kasir! Gak usah melototin foto berkas gua kelamaan, situasi jalanan di depan kampus lagi panas!",
+                pChoice: "Sesuai prosedur shift pos, pencocokan visual wajah dengan angka tahun kelahiran KTP wajib diperiksa.",
+                reply: "Lu menuduh gua pakai dokumen palsu?! Jangan cari gara-gara lu ya, palang NCR angkat sekarang juga!",
+                whiteReaction: `*Melirik sinis* "Gak butuh gua ginian! Buruan buka palang gerbangnya jangan banyak polah lu!"`,
+                redReaction: `*Melirik sinis* "Gak butuh gua ginian! Buruan buka palang gerbangnya jangan banyak polah lu!"`
+            }
+        ],
+        3: [
+            {
+                npc: "Mas loket! Di depan arah Senen ruko-ruko pertokoan sudah mulai dibakar massa! Asap tebal di mana-mana, chaos parah!",
+                pChoice: "Astaga, apinya sudah merembet ke dekat jalan tol? Tetap injak pedal gas dan jangan berhenti di bahu jalan, Pak.",
+                reply: "Sudah dekat sekali mas! Banyak orang lari-larian bawa barang penjarahan, aparat kelihatan kewalahan jaga sektor.",
+                whiteReaction: `"Maklumat penutupan gerbang tol darurat? Bagus mas, pos ini memang harus siaga sebelum diamuk massa."`,
+                redReaction: `"Pamflet kemarahan rakyat rakyat sipil! Benar mas, kota membara karena perut rakyat lapar akibat krisis moneter!"`
+            },
+            {
+                npc: "Astaga mas, Jakarta hari ini bener-bener hancur terbakar. Kabarnya korban jiwa sipil di rumah sakit lapangan sudah gak tertampung lagi!",
+                pChoice: "Kondisi evakuasi medis darurat memang dilaporkan memburuk, Bu. Utamakan keselamatan keluarga Anda.",
+                reply: "Saya shock mas melihat gedung bioskop di perempatan jalan hangus dilahap api. Banyak jeritan orang minta tolong.",
+                whiteReaction: `"Brosur posko darurat PMI? Tolong berikan beberapa lembar lagi mas, mau saya kasih ke pengemudi lain yang terluka."`,
+                redReaction: `"Selebaran runtuhkan rezim? Ya Tuhan, semoga badai kerusuhan kota ini segera berakhir dengan keadilan."`
+            },
+            {
+                npc: "Tolong mas, palang tol naikin cepat! Mobil di belakang saya barusan ada yang dilempar batu sama sekelompok orang gak dikenal!",
+                pChoice: "Tenang Pak, input kasir sedang saya proses tercepat. Masuk lajur bebas hambatan sekarang juga.",
+                reply: "Ngeri sekali mas, mereka swadaya sweeping plat nomor kendaraan. Beruntung mobil saya bisa lolos dari kepungan.",
+                whiteReaction: `"Peta jalan alternatif yang aman dari pembakaran? Terima kasih mas loket, ini menyelamatkan nyawa kami."`,
+                redReaction: `"Brosur reformasi total? Saya simpan mas, yang penting sekarang saya bisa amankan nyawa anak istri dulu."`
+            },
+            {
+                npc: "Saya mau antar pasokan obat darurat ini mas ke klinik relawan, tapi jalan protokol diblokir barikade ban dibakar mahasiswa.",
+                pChoice: "Gunakan jalur bypass jembatan layang tol timur, lajur itu diinfokan masih bersih dari konsentrasi massa.",
+                reply: "Oh begitu ya mas? Baik, terima kasih panduannya. Para dokter darurat sudah menunggu bantuan logistik ini.",
+                whiteReaction: `"Panduan keselamatan posko sektor vital? Ini membantu tim medis kami untuk mencari rute pasokan obat."`,
+                redReaction: `"Brosur aliansi gerakan mahasiswa? Mereka yang menjaga keamanan klinik kami dari penjarah liar mas."`
+            },
+            {
+                npc: "Heh kasir tol! Gak usah kelamaan ngetik tombol mesin kasir lu! Kota lagi dibakar massa di mana-mana, lu masih berani interogasi gua?!",
+                pChoice: "Verifikasi dokumen KTP adalah proteksi keamanan pos gerbang dari potensi penyelundupan barang berbahaya.",
+                reply: "Gua gak bawa apa-apaan! Jangan sampai pos tol lu ini gua suruh massa buat ratakan dengan tanah ya! Buka!",
+                whiteReaction: `*Melirik sinis* "Gak butuh gua ginian! Buruan buka palang gerbangnya jangan banyak polah lu!"`,
+                redReaction: `*Melirik sinis* "Gak butuh gua ginian! Buruan buka palang gerbangnya jangan banyak polah lu!"`
+            }
+        ],
+        4: [
+            {
+                npc: "Mas, tolong cepat proses! Itu di belakang arah Klender langitnya sudah merah hitam pekat gara-gara Mal Yogya Plaza dibakar hebat! Negara ini sudah gak aman lagi, saya bawa seluruh keluarga eksodus kabur ke luar kota malam ini!",
+                pChoice: "Innalillahi, kebakaran Mal Klender separah itu, Pak? Silakan jalan terus via tol Trans-Jawa, jalur timur masih kondusif.",
+                reply: "Parah sekali mas, bau asap hangus gedung pertokoan bahkan sampai kecium ke dalam kabin mobil saya. Trauma kami mas!",
+                whiteReaction: `"Brosur maklumat jam malam resmi? Bagus mas, kami harus keluar dari batas kota Jakarta sebelum pukul sepuluh malam."`,
+                redReaction: `"Pamflet perlawanan buruh sipil? Jakarta sudah jadi lautan api penjarahan, saya amankan nyawa keluarga dulu mas!"`
+            },
+            {
+                npc: "Ya Tuhan mas petugas loket... lemas lutut saya melihat kepulan asap hitam pekat kebakaran mal sektor timur membubung tinggi.",
+                pChoice: "Banyak informasi korban terjebak di dalam koridor, Bu. Tetap fokus berkendara dan jauhi pusat kerumunan.",
+                reply: "Katanya ratusan orang terjebak di dalam pertokoan Yogya Plaza Klender mas, ya Tuhan... kejam sekali situasi kota ini.",
+                whiteReaction: `"Catatan instruksi evakuasi jam malam darurat. Terima kasih mas, saya taruh di dasbor mobil."`,
+                redReaction: `"Brosur protes buruh dan masyarakat? Semoga dalang pembakaran mal terkutuk itu bisa dihukum setimpal mas!"`
+            },
+            {
+                npc: "Saya memutuskan eksodus massal bawa seluruh perabot rumah ke Jawa Tengah mas. Jakarta sudah tidak layak huni, gak ada hukum lagi!",
+                pChoice: "Keputusan yang rasional demi keselamatan, Pak. Berkas KTP Anda valid, silakan melanjutkan pelarian darurat.",
+                reply: "Betul mas, tetangga kompleks saya rukonya habis dijarah penjarah liar. Lebih baik mengungsi ke kampung halaman.",
+                whiteReaction: `"Panduan keamanan jalur jalan raya keluar kota. Berkas putih ini sangat berguna untuk rute pengungsian kami."`,
+                redReaction: `"Pamflet aliansi masyarakat buruh? Biarlah kota ini berubah mas, yang penting kami sekeluarga selamat dulu."`
+            },
+            {
+                npc: "Mas kasir, access lajur tol menuju Bandara Soekarno-Hatta macet total tidak? Saya mau ngejar tiket penerbangan malam ini keluar negeri!",
+                pChoice: "Lajur arah bandara mengalami lonjakan volume pengungsi eksodus, Bu. Cari rute alternatif tol lingkar luar barat.",
+                reply: "Waduh harus buru-buru berarti saya mas. Mumpung paspor dan situasi fisik keluarga masih utuh, kami mau mengungsi ke Singapura.",
+                whiteReaction: `"Maklumat jam malam bandara udara? Waduh untung mas kasih tahu, saya harus injak gas lebih dalam lagi."`,
+                redReaction: `"Brosur gerakan perubahan buruh? Maaf mas, negara ini sudah terlalu kacau, kami pilih menyelamatkan diri ke luar negeri."`
+            },
+            {
+                npc: "Gak usah banyak cingcong interogasi muatan bagasi gua! Situasi kota lagi rusuh penjarahan massal, buruan buka palang kasir lu sebelum pos tol ini dibakar massa!",
+                pChoice: "Sesuai prosedur shift pos, pencocokan dokumen KTP wajib diperiksa demi keamanan gerbang pintu kota.",
+                reply: "Gua bilang buka ya buka! Jangan sok jadi pahlawan keamanan birokrasi lu di tengah kondisi anarki begini!",
+                whiteReaction: `*Melirik sinis* "Gak butuh gua ginian! Buruan buka palang gerbangnya jangan banyak polah lu!"`,
+                redReaction: `*Melirik sinis* "Gak butuh gua ginian! Buruan buka palang gerbangnya jangan banyak polah lu!"`
+            }
+        ],
+        5: [
+            {
+                npc: "Mas loket... merinding seluruh tubuh saya mendengar siaran langsung pidato pengunduran diri Pak Harto di radio tape barusan.",
+                pChoice: "Sejarah besar baru saja tercipta pagi ini, Pak. Rezim 32 tahun akhirnya resmi berakhir di Istana Merdeka.",
+                reply: "Betul mas, saya sampai meneteskan air mata haru di dalam mobil. Akhirnya pengorbanan anak-anak mahasiswa membuahkan hasil.",
+                whiteReaction: `"Salinan teks pidato pernyataan berhenti Presiden Soeharto? Luar biasa mas, dokumen sejarah ini akan saya simpan rapi."`,
+                redReaction: `*Mengepalkan tangan* "Hidup Rakyat! Rezim runtuh, kawal terus transisi demokrasi Indonesia di setiap pos gerbang kota!"`
+            },
+            {
+                npc: "Wakil Presiden B.J. Habibie sudah resmi diambil sumpah jabatan sebagai Presiden baru Republik Indonesia mas pagi ini.",
+                pChoice: "Semoga dengan adanya pergantian transisi kepemimpinan baru ini, badai kerusuhan kota bisa langsung reda.",
+                reply: "Amin mas, kita semua sudah lelah hidup dalam ketakutan dan cemas melihat kota Jakarta hancur terbakar.",
+                whiteReaction: `"Catatan notulen kabinet darurat transisi pemerintahan baru. Semoga Pak Habibie bisa membawa stabilitas ekonomi."`,
+                redReaction: `"Brosur revolusi sipil total? Benar mas, pergantian presiden baru awal, kita harus kawal transisi demokrasi ini."`
+            },
+            {
+                npc: "Akhirnya perjuangan gerakan reformasi mahasiswa menemui titik terang mas petugas, biarpun bayarannya sangat mahal.",
+                pChoice: "Harganya berupa hancurnya infrastruktur kota dan jatuhnya korban kawan sipil kita, Bu. Mari kita rawat sejarah ini.",
+                reply: "Benar mas, toko sepupu saya di timur habis terbakar, tapi melihat palang reformasi ini runtuh, ada harapan baru buat anak cucu.",
+                whiteReaction: `"Panduan informasi pemulihan fasilitas publik kota darurat. Terima kasih selebaran infonya mas loket."`,
+                redReaction: `"Maklumat kemenangan rakyat sipil nasional! Hidup perjuangan reformasi, mari kita bangun ulang kota kita mas!"`
+            },
+            {
+                npc: "Suasana haru campur cemas mas, puluhan ribu mahasiswa di dalam gedung DPR/MPR dikabarkan masih bertahan meminta sidang istimewa.",
+                pChoice: "Kita doakan proses transisi negara ini berjalan damai tanpa ada pertumpahan darah susulan dari aparat keamanan.",
+                reply: "Iya mas petugas, saya mau mengantar pasokan makanan gratis ini buat anak-anak mahasiswa yang masih jaga di Senayan.",
+                whiteReaction: `"Selebaran regulasi ketertiban wilayah istana negara darurat. Bagus mas, biar barisan mahasiswa tetap tertib."`,
+                redReaction: `*Mengepalkan tangan* "Brosur kemenangan revolusi sipil! Sempurna mas, akan saya bagikan ke koridor tenda mahasiswa di DPR!"`
+            },
+            {
+                npc: "Palang tol kasir cepat buka! Situasi struktur kabinet pusat lagi transisi darurat gak ada hukum, gua mau amankan aset keluar wilayah sekarang!",
+                pChoice: "Meskipun negara sedang masa transisi pemerintahan, aturan shift pemeriksaan validasi KTP Jasa Marga tetap berjalan.",
+                reply: "Jangan belagu lu kasir rendahan! Rezim penguasa lu aja udah tumbang pagi ini, gak usah sok ngatur-ngatur gua!",
+                whiteReaction: `*Melirik sinis* "Gak butuh gua ginian! Buruan buka palang gerbangnya jangan banyak polah lu!"`,
+                redReaction: `*Melirik sinis* "Gak butuh gua ginian! Buruan buka palang gerbangnya jangan banyak polah lu!"`
+            }
+        ]
+    };
+
+    let playerNama = "KASIR"; let playerGender = "male"; let pPanggilan = "Mas"; 
+    let playerTglLahir = "29-01-1973"; let playerFisikStr = "LAKI-LAKI MUDA";
+    let gameLevel = 1; let currentPlatNomor = ""; let activeScenarioData = null;
+
+    const depanCowo = ["Bambang", "Supriadi", "Wahyu", "Hendra", "Agus", "Eko", "Joko", "Ahmad", "Suryo", "Dedi", "Rian", "Taufik"];
+    const belakangCowo = ["Susilo", "Prasetyo", "Wibowo", "Kurniawan", "Hidayat", "Saputra", "Setiawan", "Utomo", "Budiman", "Rahman"];
+    const depanCewe = ["Siti", "Sri", "Dewi", "Rina", "Mega", "Yuni", "Ani", "Indah", "Putri", "Kartika", "Sari", "Fitri"];
+    const belakangCewe = ["Aminah", "Lestari", "Wahyuni", "Utami", "Setyowati", "Rahayu", "Kusuma", "Ningsih", "Permatasari", "Saraswati"];
+    const kerjaNormal = ["PNS", "WIRASWASTA", "KARYAWAN SWASTA", "GURU", "PEDAGANG", "SUPIR LOGISTIK", "BURUH"];
+    
+    const poolJalan = ["JL. KRAMAT RAYA", "JL. JEND. SUDIRMAN", "JL. GATOT SUBROTO", "JL. PONDOK GEDE", "JL. MATRAMAN RAYA", "JL. PEMUDA", "JL. MARGONDA RAYA", "JL. KEBON JERUK", "JL. DAAN MOGOT", "JL. BLOK M"];
+    const poolKelurahan = ["KENARI", "SENEN", "GAMBIR", "PONDOK KELAPA", "UTAN KAYU", "KAMPUNG MELAYU", "TEBET BARAT", "PALMERAH", "GROGOL", "MELAWAI"];
+    const poolKecamatan = ["SENEN", "GAMBIR", "DUREN SAWIT", "MATRAMAN", "JATINEGARA", "TEBET", "PALMERAH", "GROGOL PETAMBURAN", "KEBAYORAN BARU", "PASAR REBO"];
+
+    window.addEventListener('DOMContentLoaded', () => { runRetroLoading(); });
+
+    function runRetroLoading() {
+        const fill = document.getElementById('progress-fill'); const percent = document.getElementById('progress-percent'); const log = document.getElementById('log-container');
+        const logMessages = [
+            "CONNECTING TO JASA MARGA SYSTEM NETWORK...",
+            "LOADING RETRO AUDIO INTERACTIVE DRIVERS... OK.",
+            "MOUNTING DATABASE KTP JALUR DKI JAKARTA...",
+            "SYNCHRONIZING TERMINAL MESSAGES NCR-98...",
+            "ESTABLISHING POS UTAMA GATE COMM LINK...",
+            "SYSTEM STABLE. READY FOR SECURITY OPERATIONAL."
+        ];
+        let pct = 0; let msgIndex = 0;
+        let interval = setInterval(() => {
+            pct += Math.floor(Math.random() * 5) + 3;
+            if(pct >= 100) {
+                pct = 100; clearInterval(interval);
+                setTimeout(() => {
+                    document.getElementById('loading-screen').style.display = 'none';
+                    document.getElementById('main-menu').style.display = 'flex';
+                }, 500);
+            }
+            fill.style.width = pct + "%"; percent.innerText = pct + "%";
+            if(pct % 18 === 0 && msgIndex < logMessages.length) { log.innerHTML += "> " + logMessages[msgIndex] + "<br>"; msgIndex++; }
+        }, 45);
+    }
+
+    function selectLevel(lvl) {
+        clickSound(); gameLevel = lvl;
+        document.querySelectorAll('.lvl-btn').forEach(btn => btn.classList.remove('selected'));
+        document.getElementById('lvl-' + lvl).classList.add('selected');
+    }
+
+    function generateRandomName(gender) {
+        if(gender === "LAKI-LAKI") { return `${depanCowo[Math.floor(Math.random() * depanCowo.length)]} ${belakangCowo[Math.floor(Math.random() * belakangCowo.length)]}`.toUpperCase(); }
+        else { return `${depanCewe[Math.floor(Math.random() * depanCewe.length)]} ${belakangCewe[Math.floor(Math.random() * belakangCewe.length)]}`.toUpperCase(); }
+    }
+
+    function generateRandomAddress() {
+        let jl = poolJalan[Math.floor(Math.random() * poolJalan.length)]; let no = Math.floor(Math.random() * 90) + 1;
+        let rt = (Math.floor(Math.random() * 12) + 1).toString().padStart(2, '0'); let rw = (Math.floor(Math.random() * 12) + 1).toString().padStart(2, '0');
+        let idx = Math.floor(Math.random() * poolKelurahan.length);
+        return `${jl} NO. ${no}, RT ${rt}/RW ${rw}, KEL. ${poolKelurahan[idx]}, KEC. ${poolKecamatan[idx]}`;
+    }
+
+    function generateRandomBirthDate(minAge, maxAge) {
+        let age = Math.floor(Math.random() * (maxAge - minAge + 1)) + minAge; let birthYear = 1998 - age;
+        let day = Math.floor(Math.random() * 28) + 1; let month = Math.floor(Math.random() * 12) + 1;
+        return { str: `${day.toString().padStart(2, '0')}-${month.toString().padStart(2, '0')}-${birthYear}` };
+    }
+
+    const poolFotoNpc = {
+        'male_muda': ["assets/karakter/wargapria1.png", "assets/karakter/wargapria2.png", "assets/karakter/wargapria3.png"],
+        'male_tua': ["assets/karakter/wargapria4.png", "assets/karakter/wargapria5.png"],
+        'female_muda': ["assets/karakter/wargawanita1.png", "assets/karakter/wargawanita2.png", "assets/karakter/wargawanita3.png"],
+        'female_tua': ["assets/karakter/wargawanita4.png", "assets/karakter/wargawanita5.png"]
+    };
+
+    function getDialogData() {
+        let poolLevelAktif = poolDialogPerLevel[gameLevel];
+        let randIndex = Math.floor(Math.random() * 4); 
+        
+        if (currentVehicle === 'weapon') {
+            activeScenarioData = poolLevelAktif[4]; 
+        } else if (currentVehicle === 'bus') {
+            activeScenarioData = {
+                npc: "BUKA PALANGNYA SEKARANG!! KAMI ROMBONGAN ALIANSI REFORMASI MAU TEMBUS KE IBUKOTA!! JANGAN DIHALANGI!!",
+                pChoice: "Maaf rombongan bus besar demonstran dilarang masuk koridor tanpa surat izin komando.",
+                reply: "NEKAT LU YA?! DOBRAK PALANG GERBANG TOL INI SEKARANG KAWAN-KAWAN!!",
+                whiteReaction: "", redReaction: ""
+            };
+        } else {
+            activeScenarioData = poolLevelAktif[randIndex];
+        }
+
+        return {
+            npc: activeScenarioData.npc,
+            choices: [
+                { text: `💬 (Bicara) "${activeScenarioData.pChoice}"`, reply: activeScenarioData.reply }
+            ]
+        };
+    }
+
+    let isPreGameNews = true; let isGameStarted = false;
+
+    function updateIDPreview() {
+        let nama = document.getElementById('input-nama').value.trim(); playerNama = nama === "" ? "NAMA KASIR" : nama.toUpperCase();
+        document.getElementById('preview-id-nama').innerText = playerNama; document.getElementById('preview-nama-id').innerText = playerNama;
+        playerGender = document.getElementById('input-gender').value; pPanggilan = playerGender === 'male' ? "Mas" : "Mbak";
+        document.getElementById('preview-id-gender').innerText = playerGender === 'male' ? "LAKI-LAKI" : "PEREMPUAN";
+        let umurKasir = parseInt(document.getElementById('input-umur').value); let birthYear = 1998 - umurKasir; playerTglLahir = `29-01-${birthYear}`;
+        document.getElementById('preview-id-tgl').innerText = playerTglLahir;
+        let kasirKategoriUmur = (umurKasir <= 35) ? "MUDA" : "TUA"; playerFisikStr = `${playerGender === 'male' ? 'LAKI-LAKI' : 'PEREMPUAN'} ${kasirKategoriUmur}`;
+        document.getElementById('preview-id-phys').innerText = playerFisikStr;
+        let pathAset = playerGender === 'male' ? 'assets/karakter/karakter_cowok.png' : 'assets/karakter/karater_cewek.png';
+        document.getElementById('preview-foto-ktp').src = pathAset; document.getElementById('preview-foto-id').src = pathAset;
+    }
+
+    function goToRules() {
+        let nama = document.getElementById('input-nama').value.trim(); if(nama === "") { alert("Mohon isi Nama Petugas terlebih dahulu!"); return; }
+        document.getElementById('main-menu').style.display = 'none'; document.getElementById('rules-screen').style.display = 'flex';
+    }
+
+    function goToPreGameNewspaper() { document.getElementById('rules-screen').style.display = 'none'; document.getElementById('newspaper-screen').style.display = 'flex'; isPreGameNews = true; setupNewspaperUI(); }
+    function openNewspaperInGame() { if(!isPlaying || isProcessing || isTyping) return; document.getElementById('newspaper-screen').style.display = 'flex'; isPreGameNews = false; setupNewspaperUI(); }
+
+    function viewBrochureContent(color) {
+        if(!isPlaying || isProcessing || isTyping) return;
+        clickSound();
+        const box = document.getElementById('propaganda-box-bg');
+        const title = document.getElementById('prop-view-title');
+        const body = document.getElementById('prop-view-body');
+        
+        let lvlData = poolBrosurPerLevel[gameLevel] || poolBrosurPerLevel[1];
+
+        if(color === 'white') {
+            box.style.border = "6px double #2c3e50"; box.style.background = "#ffffff";
+            title.innerText = lvlData.whiteTitle; title.style.color = "#2c3e50";
+            body.innerText = lvlData.whiteBody;
+        } else {
+            box.style.border = "6px double #b91c1c"; box.style.background = "#ebdcb9";
+            title.innerText = lvlData.redTitle; title.style.color = "#b91c1c";
+            body.innerText = lvlData.redBody;
+        }
+        document.getElementById('propaganda-overlay').style.display = 'flex';
+    }
+    function closeBrochureView() { clickSound(); document.getElementById('propaganda-overlay').style.display = 'none'; }
+
+    function setupNewspaperUI() {
+        let dataKoran = poolKoranPerLevel[gameLevel];
+        document.getElementById('news-paper-title').innerText = dataKoran.title; 
+        document.getElementById('news-paper-date').innerText = dataKoran.date;
+        document.getElementById('news-img-asset').src = dataKoran.image; 
+        document.getElementById('news-headline-text').innerText = dataKoran.headline; 
+        document.getElementById('news-full-body').innerHTML = dataKoran.body; 
+        
+        let btnClose = document.getElementById('btn-close-news');
+        if(isPreGameNews) { btnClose.innerText = "MULAI SHIFT \u2714"; btnClose.style.background = "#27ae60"; } 
+        else { btnClose.innerText = "TUTUP KORAN \u2716"; btnClose.style.background = "#e74c3c"; }
+    }
+
+    function handleNewspaperClose() { if(isPreGameNews) { initAudioAndStart(); } else { document.getElementById('newspaper-screen').style.display = 'none'; } }
+    function toggleZoomKTP() { if(!isPlaying || isProcessing) return; clickSound(); document.getElementById('player-ktp-card').classList.remove('ktp-zoom'); npcKtp.classList.toggle('ktp-zoom'); }
+    function toggleZoomPlayerKTP() { if(!isPlaying || isProcessing) return; clickSound(); npcKtp.classList.remove('ktp-zoom'); document.getElementById('player-ktp-card').classList.toggle('ktp-zoom'); }
+
+    /* --- UTILITY SIARAN RADIO --- */
+    let radioOn = false; let radioInterval = null;
+
+    function toggleRadio() {
+        if(!isPlaying) return;
+        clickSound(); radioOn = !radioOn;
+        const display = document.getElementById('radio-display');
+        const status = document.getElementById('radio-status');
+
+        if(radioOn) {
+            display.innerText = "98.5 FM"; display.style.background = "#ff3333"; display.style.color = "#fff";
+            status.innerText = "🟢 MENYALA";
+            
+            let currentRadioPool = poolRadioPerLevel[gameLevel];
+
+            radioInterval = setInterval(() => {
+                if(!isTyping && isPlaying) {
+                    let text = currentRadioPool[Math.floor(Math.random() * currentRadioPool.length)];
+                    scrAsal.innerText = text; scrAsal.style.color = "#ffaa00";
+                    if(audioCtx) {
+                        let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+                        osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(400 + Math.random()*200, audioCtx.currentTime);
+                        gain.gain.setValueAtTime(0.02, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+                    }
+                }
+            }, 5000);
+        } else {
+            clearInterval(radioInterval);
+            display.innerText = "OFF"; display.style.background = "#22ff22"; display.style.color = "#000";
+            status.innerText = "🔴 MATI";
+            if(isPlaying) {
+                if(gameLevel === 5) { scrAsal.innerText = "⚠️ DARURAT SIAGA 1 - PERIKSA BERKAS!"; scrAsal.style.color = "#ff3333"; }
+                else if(gameLevel === 4) { scrAsal.innerText = "⚠️ REZIM DARURAT: ARUS EKSODUS MASSAL KOTA"; scrAsal.style.color = "#ffaa00"; }
+                else if(gameLevel === 3) { scrAsal.innerText = "⚠️ SEKTOR CHAOS: JAKARTA MEMBARA"; scrAsal.style.color = "#ff3333"; }
+                else if(gameLevel === 2) { scrAsal.innerText = "⚠️ GERAKAN MAHASISWA MELUAS"; scrAsal.style.color = "yellow"; }
+                else { scrAsal.innerText = "SCAN [F1] DIAG ATAU PROSES [GOL I]"; scrAsal.style.color = "#22ff22"; }
+            }
+        }
+    }
+
+    /* --- RETRO AUDIO ENGINE --- */
+    let audioCtx = null;
+    function initAudioAndStart() {
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        document.getElementById('nama-id').innerText = playerNama; document.getElementById('nama-ktp-id').innerText = playerNama;
+        document.getElementById('gender-ktp-id').innerText = playerGender === 'male' ? "LAKI-LAKI" : "PEREMPUAN";
+        document.getElementById('tgl-ktp-id').innerText = playerTglLahir; document.getElementById('fisik-ktp-id').innerText = playerFisikStr;
+        let pathAset = playerGender === 'male' ? 'assets/karakter/karakter_cowok.png' : 'assets/karakter/karater_cewek.png';
+        document.getElementById('foto-id').src = pathAset; document.getElementById('foto-ktp-id').src = pathAset;
+        document.getElementById('newspaper-screen').style.display = 'none'; isGameStarted = true; startGame();
+    }
+
+    function playTypeSound() { if (!audioCtx) return; let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'triangle'; osc.frequency.setValueAtTime(120 + Math.random()*50, audioCtx.currentTime); gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.03); osc.start(); osc.stop(audioCtx.currentTime + 0.03); }
+    function clickSound() { if (!audioCtx) return; let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); gain.gain.setValueAtTime(0.08, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.005, audioCtx.currentTime + 0.04); osc.start(); osc.stop(audioCtx.currentTime + 0.04); }
+    function paperSound() { if (!audioCtx) return; let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'triangle'; osc.frequency.setValueAtTime(90, audioCtx.currentTime); gain.gain.setValueAtTime(0.12, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.15); osc.start(); osc.stop(audioCtx.currentTime + 0.15); }
+    function badBeep() { if (!audioCtx) return; let now = audioCtx.currentTime; let osc1 = audioCtx.createOscillator(); let osc2 = audioCtx.createOscillator(); let gain = audioCtx.createGain(); osc1.connect(gain); osc2.connect(gain); gain.connect(audioCtx.destination); osc1.type = 'sawtooth'; osc1.frequency.setValueAtTime(110, now); osc2.type = 'square'; osc2.frequency.setValueAtTime(114, now); gain.gain.setValueAtTime(0.25, now); gain.gain.linearRampToValueAtTime(0.001, now + 0.35); osc1.start(now); osc2.start(now); osc1.stop(now + 0.35); osc2.stop(now + 0.35); }
+    function scanSound() { if (!audioCtx) return; let now = audioCtx.currentTime; let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(350, now); osc.frequency.linearRampToValueAtTime(1300, now + 0.45); gain.gain.setValueAtTime(0.15, now); gain.gain.linearRampToValueAtTime(0.001, now + 0.45); osc.start(now); osc.stop(now + 0.45); }
+    function playPrinterSound() { if (!audioCtx) return; let now = audioCtx.currentTime; let sampleRate = audioCtx.sampleRate; for (let i = 0; i < 7; i++) { let t = now + (i * 0.16); let osc = audioCtx.createOscillator(); let oscGain = audioCtx.createGain(); osc.connect(oscGain); oscGain.connect(audioCtx.destination); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(850 - (i * 40), t); oscGain.gain.setValueAtTime(0.12, t); oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.07); osc.start(t); osc.stop(t + 0.07); let bufferSize = sampleRate * 0.09; let buffer = audioCtx.createBuffer(1, bufferSize, sampleRate); let data = buffer.getChannelData(0); for (let j = 0; j < bufferSize; j++) { data[j] = Math.random() * 2 - 1; } let noise = audioCtx.createBufferSource(); noise.buffer = buffer; let filter = audioCtx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.setValueAtTime(2200, t); let noiseGain = audioCtx.createGain(); noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(audioCtx.destination); noiseGain.gain.setValueAtTime(0.18, t); noiseGain.gain.linearRampToValueAtTime(0.001, t + 0.09); noise.start(t); noise.stop(t + 0.09); } }
+    function playRipPaperSound() { if (!audioCtx) return; let now = audioCtx.currentTime; let sampleRate = audioCtx.sampleRate; let bufferSize = sampleRate * 0.15; let buffer = audioCtx.createBuffer(1, bufferSize, sampleRate); let data = buffer.getChannelData(0); for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; } let noiseSource = audioCtx.createBufferSource(); noiseSource.buffer = buffer; let filter = audioCtx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.setValueAtTime(1400, now); filter.frequency.linearRampToValueAtTime(800, now + 0.14); let gainNode = audioCtx.createGain(); noiseSource.connect(filter); filter.connect(gainNode); gainNode.connect(audioCtx.destination); gainNode.gain.setValueAtTime(0.6, now); gainNode.gain.linearRampToValueAtTime(0.001, now + 0.14); noiseSource.start(now); noiseSource.stop(now + 0.14); }
+    function policeSirenLoop() { if (!audioCtx) return; let now = audioCtx.currentTime; let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'triangle'; osc.frequency.setValueAtTime(600, now); for(let i = 0; i < 15; i++) { osc.frequency.linearRampToValueAtTime(i % 2 === 0 ? 800 : 550, now + (i * 0.12)); } gain.gain.setValueAtTime(0.12, now); gain.gain.linearRampToValueAtTime(0.01, now + 1.8); osc.start(now); osc.stop(now + 1.8); }
+
+    // --- GAME ENGINE ---
+    let score = 0; let uang = 0; 
+    let isPlaying = false; let isProcessing = false; let tarifSet = false; let receiptPrinted = false; 
+    let currentVehicle = null; let isTyping = false; let hasInteracted = false; 
+
+    const vehicleSpawn = document.getElementById('vehicle-spawn'); const policeSpawn = document.getElementById('police-spawn'); const tollGate = document.getElementById('toll-gate');
+    const scrPlat = document.getElementById('scr-plat'); const scrAsal = document.getElementById('scr-asal'); const scrTarif = document.getElementById('scr-tarif'); const inputBox = document.getElementById('input-box');
+    const scoreVal = document.getElementById('score-val'); const moneyVal = document.getElementById('money-val'); const levelVal = document.getElementById('level-val'); const targetVal = document.getElementById('target-val');
+    const npcKtp = document.getElementById('npc-ktp'); const tollReceipt = document.getElementById('toll-receipt');
+    const dialogBox = document.getElementById('dialog-box'); const dialogName = document.getElementById('dialog-name'); const dialogText = document.getElementById('dialog-text'); const playerChoicesDiv = document.getElementById('player-choices');
+
+    setInterval(() => { const d = new Date(); document.getElementById('time-display').innerText = d.getHours().toString().padStart(2,'0') + ":" + d.getMinutes().toString().padStart(2,'0'); }, 1000);
+
+    function updateMoney(amount) {
+        uang += amount; moneyVal.innerText = uang.toLocaleString('id-ID');
+        let currentTarget = targetUangPerLevel[gameLevel];
+        if(uang >= currentTarget) { isPlaying = false; clearInterval(radioInterval); gameOver("SHIFT SELESAI (KAMU MENANG!)", `Luar biasa! Kamu berhasil mencapai target shift minimal sebesar Rp ${currentTarget.toLocaleString('id-ID')} pada LEVEL ${gameLevel}!`); return; }
+    }
+
+    function startGame() {
+        score = 0; uang = 0; scoreVal.innerText = score; moneyVal.innerText = uang; levelVal.innerText = gameLevel;
+        targetVal.innerText = targetUangPerLevel[gameLevel].toLocaleString('id-ID'); 
+        isPlaying = true; document.getElementById('game-over').style.display = 'none';
+        
+        if(gameLevel === 5) {
+            document.getElementById('smoke-left').className = "smoke smoke-chaos";
+            document.getElementById('smoke-right').className = "smoke smoke-chaos";
+        } else if(gameLevel === 4) {
+            document.getElementById('smoke-left').className = "smoke smoke-klender";
+            document.getElementById('smoke-right').className = "smoke smoke-klender";
+        } else if(gameLevel === 3) {
+            document.getElementById('smoke-left').className = "smoke smoke-level3";
+            document.getElementById('smoke-right').className = "smoke smoke-level3";
+        } else if(gameLevel === 2) {
+            document.getElementById('smoke-left').className = "smoke smoke-level2";
+            document.getElementById('smoke-right').className = "smoke smoke-level2";
+        } else {
+            document.getElementById('smoke-left').className = "smoke";
+            document.getElementById('smoke-right').className = "smoke";
+        }
+
+        document.getElementById('brochure-white').style.display = 'block';
+        document.getElementById('brochure-red').style.display = 'block';
+        
+        nextVehicle();
+    }
+
+    function generatePlat() { currentPlatNomor = `B ${Math.floor(1000 + Math.random() * 8999)} ${String.fromCharCode(65 + Math.random() * 26)}${String.fromCharCode(65 + Math.random() * 26)}`; return currentPlatNomor; }
+
+    function generateKTPData(type) {
+        let elNik = document.getElementById('ktp-nik'); let elNama = document.getElementById('ktp-nama'); let elGender = document.getElementById('ktp-gender');
+        let elTgl = document.getElementById('ktp-tgl'); let elAlamat = document.getElementById('ktp-alamat');
+        let elFisikStr = document.getElementById('ktp-phys'); let elKerja = document.getElementById('ktp-kerja'); let elBerlaku = document.getElementById('ktp-berlaku'); let elFoto = document.getElementById('ktp-foto-img');
+
+        elNik.innerText = Math.floor(Math.random() * 9000000000) + 1000000000; elBerlaku.classList.remove('ktp-expired');
+        let nGender = Math.random() > 0.5 ? "LAKI-LAKI" : "PEREMPUAN"; elGender.innerText = nGender;
+        let visualAgeGroup = "MUDA"; elFisikStr.innerText = `${nGender} ${visualAgeGroup}`; elAlamat.innerText = generateRandomAddress();
+        let key = `${nGender === "LAKI-LAKI" ? "male" : "female"}_muda`; let arrFoto = poolFotoNpc[key]; elFoto.src = arrFoto[Math.floor(Math.random() * arrFoto.length)];
+        elNama.innerText = generateRandomName(nGender);
+
+        if(type === 'car') {
+            let birthData = generateRandomBirthDate(20, 28); elTgl.innerText = birthData.str; elKerja.innerText = kerjaNormal[Math.floor(Math.random() * kerjaNormal.length)];
+            elBerlaku.innerText = "14-08-200" + Math.floor(Math.random() * 5); 
+        } else {
+            let birthData = generateRandomBirthDate(38, 48); elTgl.innerText = birthData.str; elKerja.innerText = "BELUM/TIDAK BEKERJA";
+            elBerlaku.innerText = "01-01-199" + Math.floor(Math.random() * 7); elBerlaku.classList.add('ktp-expired');
+        }
+    }
+
+    function typeWriterEffect(text, speed, callback) {
+        isTyping = true; dialogBox.style.display = 'block'; dialogText.innerText = ""; playerChoicesDiv.style.display = 'none'; let i = 0;
+        function typing() {
+            if (i < text.length) { dialogText.innerHTML += text.charAt(i); if(text.charAt(i) !== " ") playTypeSound(); i++; setTimeout(typing, speed); } 
+            else { isTyping = false; if(callback) callback(); }
+        }
+        typing();
+    }
+
+    function nextVehicle() {
+        if (!isPlaying) return;
+        isProcessing = true; tarifSet = false; hasInteracted = false; receiptPrinted = false;
+        dialogBox.style.display = 'none'; playerChoicesDiv.style.display = 'none'; tollGate.classList.remove('gate-open');
+        policeSpawn.style.display = 'none'; policeSpawn.style.left = '-650px'; npcKtp.classList.remove('ktp-zoom'); document.getElementById('player-ktp-card').classList.remove('ktp-zoom'); npcKtp.style.bottom = '-200px'; 
+        tollReceipt.classList.remove('printed'); tollReceipt.style.height = "0px";
+        scrPlat.innerText = "PLAT: -"; 
+        
+        if(gameLevel === 5) { scrAsal.innerText = "⚠️ DARURAT SIAGA 1 - PERIKSA BERKAS!"; scrAsal.style.color = "#ff3333"; } 
+        else if(gameLevel === 4) { scrAsal.innerText = "⚠️ REZIM DARURAT: ARUS EKSODUS MASSAL KOTA"; scrAsal.style.color = "#ffaa00"; }
+        else if(gameLevel === 3) { scrAsal.innerText = "⚠️ SEKTOR CHAOS: JAKARTA MEMBARA"; scrAsal.style.color = "#ff3333"; }
+        else if(gameLevel === 2) { scrAsal.innerText = "⚠️ GERAKAN MAHASISWA MELUAS"; scrAsal.style.color = "yellow"; }
+        else { scrAsal.innerText = "MENDETEKSI KENDARAAN..."; scrAsal.style.color = "#22ff22"; }
+        scrTarif.innerText = "Rp 0"; inputBox.innerText = "INPUT: Rp 0";
+        vehicleSpawn.style.transition = 'none'; vehicleSpawn.style.right = '-650px';
+        
+        const rand = Math.random();
+        if(gameLevel === 1) { currentVehicle = 'car'; } 
+        else if(gameLevel === 2) { currentVehicle = rand < 0.12 ? 'weapon' : 'car'; } 
+        else if(gameLevel === 3) { currentVehicle = rand < 0.1 ? 'bus' : (rand < 0.22 ? 'weapon' : 'car'); } 
+        else if(gameLevel === 4) { currentVehicle = rand < 0.18 ? 'weapon' : 'car'; } 
+        else { currentVehicle = rand < 0.15 ? 'bus' : (rand < 0.3 ? 'weapon' : 'car'); }
+
+        let vHTML = currentVehicle === 'bus' ? 
+            `<div class="bus-model"><div class="windows"></div><div class="banner">REFORMASI!</div><div class="wheel w-front"></div><div class="wheel w-back"></div></div>` : 
+            `<div class="car-model"><div class="window"></div><div class="wheel w-front"></div><div class="wheel w-back"></div></div>`;
+        
+        vehicleSpawn.innerHTML = vHTML; let spawnSpeed = Math.max(400, 1800 - (gameLevel * 200));
+        setTimeout(() => { vehicleSpawn.style.transition = 'right 1.8s cubic-bezier(0.16, 1, 0.3, 1)'; vehicleSpawn.style.right = '32%'; }, 100);
+
+        setTimeout(() => {
+            scrPlat.innerText = "PLAT: " + generatePlat(); 
+            if(!radioOn && gameLevel < 3) { scrAsal.innerText = "PERIKSA BERKAS KTP & KLIK OPSI DIALOG!"; scrAsal.style.color = "yellow"; }
+            if(currentVehicle !== 'bus') { generateKTPData(currentVehicle); paperSound(); npcKtp.style.bottom = '20px'; }
+
+            let activeScenario = getDialogData();
+            
+            if(currentVehicle === 'bus') { dialogName.innerText = "MASSA DEMONSTRAN"; dialogName.style.color = "#e74c3c"; } 
+            else if (currentVehicle === 'weapon') { dialogName.innerText = "PENGENDARA MENCURIGAKAN"; dialogName.style.color = "#b91c1c"; } 
+            else { dialogName.innerText = "PENGENDARA SIPIL"; dialogName.style.color = "#3498db"; }
+
+            typeWriterEffect(activeScenario.npc, 25, () => {
+                playerChoicesDiv.innerHTML = "";
+                activeScenario.choices.forEach((choice, idx) => {
+                    let btn = document.createElement('button'); btn.className = 'choice-btn'; btn.innerText = choice.text;
+                    btn.onclick = () => playerRespondFirstTalk(choice.reply); playerChoicesDiv.appendChild(btn);
+                });
+                playerChoicesDiv.style.display = 'flex';
+            });
+        }, spawnSpeed);
+    }
+
+    function playerRespondFirstTalk(npcReply) {
+        clickSound(); playerChoicesDiv.style.display = 'none'; 
+        typeWriterEffect(npcReply, 25, () => {
+            playerChoicesDiv.innerHTML = "";
+
+            if(currentVehicle !== 'bus') {
+                let btnProcess = document.createElement('button'); btnProcess.className = 'choice-btn'; btnProcess.style.background = "#27ae60"; btnProcess.innerText = "🖨️ (Proses Data Tarif Loket di Mesin NCR)";
+                btnProcess.onclick = () => { clickSound(); dialogBox.style.display = 'none'; isProcessing = false; hasInteracted = true; if(!radioOn && gameLevel < 3) { scrAsal.innerText = "SCAN [F1] DIAG DETEKSI ATAU PROSES [GOL I]"; scrAsal.style.color = "#22ff22"; } };
+                playerChoicesDiv.appendChild(btnProcess);
+
+                let btnWhite = document.createElement('button'); btnWhite.className = 'choice-btn'; btnWhite.style.background = "#fff"; btnWhite.style.color = "#111";
+                btnWhite.innerText = "📝 (Serahkan Selebaran Informasi Berkas Sektor)";
+                btnWhite.onclick = () => playerRespondBrochureAction('white'); playerChoicesDiv.appendChild(btnWhite);
+
+                let btnRed = document.createElement('button'); btnRed.className = 'choice-btn'; btnRed.style.background = "#b91c1c"; btnRed.style.color = "#fff";
+                btnRed.innerText = "⚠️ (Serahkan Selebaran Pamflet Pergerakan Rakyat)";
+                btnRed.onclick = () => playerRespondBrochureAction('red'); playerChoicesDiv.appendChild(btnRed);
+            } else {
+                let btnBusHold = document.createElement('button'); btnBusHold.className = 'choice-btn'; btnBusHold.style.background = "#e74c3c"; btnBusHold.innerText = "🚨 (Gunakan Walkie-Talkie CH-POLRI Segera!)";
+                btnBusHold.onclick = () => { clickSound(); dialogBox.style.display = 'none'; isProcessing = false; hasInteracted = true; };
+                playerChoicesDiv.appendChild(btnBusHold);
+            }
+
+            playerChoicesDiv.style.display = 'flex';
+        });
+    }
+
+    function playerRespondBrochureAction(color) {
+        clickSound(); playerChoicesDiv.style.display = 'none';
+        let replyText = color === 'white' ? activeScenarioData.whiteReaction : activeScenarioData.redReaction;
+        
+        typeWriterEffect(replyText, 25, () => {
+            isProcessing = false; hasInteracted = true; 
+            if(!radioOn && gameLevel < 3) { scrAsal.innerText = "SCAN [F1] DIAG DETEKSI ATAU PROSES [GOL I]"; scrAsal.style.color = "#22ff22"; }
+        });
+    }
+
+    function pressF1() {
+        if(isProcessing || !isPlaying || isTyping || !hasInteracted || receiptPrinted) { badBeep(); return; }
+        scanSound(); scrAsal.innerText = "SCANNING DATABASE NEGARA..."; scrAsal.style.color = "yellow"; isProcessing = true;
+        setTimeout(() => {
+            if(currentVehicle === 'weapon') { scrAsal.innerText = "PERINGATAN: KETERANGAN FISIK TIDAK SINKRON DENGAN ANGKA LAHIR!"; scrAsal.style.color = "#ff3333"; } 
+            else { scrAsal.innerText = "BERKAS VALID: SIPIL SEPADAN DENGAN DATA POS."; scrAsal.style.color = "#22ff22"; }
+            isProcessing = false;
+        }, 800);
+    }
+
+    function pressGol1() {
+        if(isProcessing || !isPlaying || isTyping || !hasInteracted || receiptPrinted) { badBeep(); return; }
+        playTypeSound();
+        if(currentVehicle === 'car' || currentVehicle === 'weapon') { tarifSet = true; scrTarif.innerText = "Rp 1.500"; inputBox.innerText = "INPUT: [GOL I] OK"; } 
+        else { badBeep(); }
+    }
+
+    function pressEnter() {
+        if(isProcessing || !isPlaying || isTyping || !hasInteracted || receiptPrinted) { badBeep(); return; }
+        playTypeSound();
+        if((currentVehicle === 'car' || currentVehicle === 'weapon') && tarifSet) {
+            isProcessing = true;
+            if(currentVehicle === 'weapon') { npcKtp.style.bottom = '-200px'; clearInterval(radioInterval); gameOver("MELOLOSKAN KELOMPOK KRIMINAL!", `Kamu meloloskan pemalsu dokumen bersenjata masuk ke ibu kota di Level ${gameLevel}! Jabatan dicopot.`); return; }
+            document.getElementById('rec-plat').innerText = "PLAT: " + currentPlatNomor;
+            scrAsal.innerText = "MENCETAK STRUK TARIF (EFEK AUDIO KERTAS)..."; scrAsal.style.color = "yellow";
+            playPrinterSound(); 
+            setTimeout(() => { tollReceipt.style.height = "75px"; tollReceipt.classList.add('printed'); receiptPrinted = true; isProcessing = false; scrAsal.innerText = "SILAKAN SOBEK STRUK (KLIK KERTAS DI MEJA) UNTUK MELANJUTKAN!"; scrAsal.style.color = "#22ff22"; }, 1200);
+        } else if (currentVehicle === 'bus') { clearInterval(radioInterval); gameOver("GERBANG JEBOL!", "Kamu membiarkan gerbang terbuka! Bus langsung merangsek menghancurkan pos gerbang."); } 
+        else { badBeep(); }
+    }
+
+    function tearAndGiveReceipt() {
+        if(!isPlaying || isProcessing || !receiptPrinted) return;
+        isProcessing = true; playRipPaperSound(); tollReceipt.style.height = "0px"; tollReceipt.classList.remove('printed');
+        npcKtp.classList.remove('ktp-zoom'); npcKtp.style.bottom = '-200px';
+        dialogName.innerText = "PENGENDARA"; dialogName.style.color = "#3498db";
+        typeWriterEffect(`*Menerima struk tol* "Terima kasih banyak ya petugas loket, mari!"`, 20, () => {
+            score += 100; scoreVal.innerText = score; updateMoney(1500); tollGate.classList.add('gate-open');
+            setTimeout(() => { vehicleSpawn.style.transition = 'right 1.4s ease-in'; vehicleSpawn.style.right = '130%'; setTimeout(() => { nextVehicle(); }, 1500); }, 600);
+        });
+    }
+
+    function useWalkieTalkie() {
+        if(isProcessing || !isPlaying || isTyping || !hasInteracted || receiptPrinted) { badBeep(); return; }
+        clickSound(); scrAsal.innerText = "*MENGIRIM KOORDINAT KE POLDA...*";
+        if(currentVehicle === 'bus' || currentVehicle === 'weapon') {
+            isProcessing = true; policeSirenLoop();
+            setTimeout(() => {
+                policeSpawn.style.display = 'block'; setTimeout(() => { policeSpawn.style.left = '3%'; }, 50);
+                setTimeout(() => { score += 150; scoreVal.innerText = score; updateMoney(currentVehicle === 'bus' ? 5000 : 7000); vehicleSpawn.style.right = '-650px'; policeSpawn.style.left = '-650px'; setTimeout(() => { nextVehicle(); }, 1500); }, 1600);
+            }, 500);
+        } else { clearInterval(radioInterval); gameOver("SALAH TANGKAP!", `Kamu menahan warga sipil patuh hukum tanpa bukti pelanggaran KTP.`); }
+    }
+
+    function gameOver(title, reason) { isPlaying = false; clearInterval(radioInterval); dialogBox.style.display = 'none'; document.getElementById('go-title').innerText = title; document.getElementById('go-reason').innerText = reason; document.getElementById('final-score').innerText = score; document.getElementById('final-money').innerText = uang.toLocaleString('id-ID'); document.getElementById('game-over').style.display = 'flex'; }
+</script>
+</body>
+</html>
